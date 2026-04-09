@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import Head from "next/head";
 
 // Gemini 1.5 Flash — 무료 티어 1,500회/일, 신용카드 불필요
-const GEMINI_MODEL = "gemini-1.5-flash";
+const GEMINI_MODEL = "gemini-1.5-flash-latest";
 const GEMINI_URL = (key) =>
   `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${key}`;
 
