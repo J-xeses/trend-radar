@@ -1,11 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Head from "next/head";
 
-// Gemini 1.5 Flash — 무료 티어 1,500회/일, 신용카드 불필요
-const GEMINI_MODEL = "gemini-2.0-flash";
-const GEMINI_URL = (key) =>
-  `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${key}`;
-
 /* ─── Design Tokens ─── */
 const T = {
   bg:"#070710", s:"#0e0e1a", s2:"#12121f", c:"#181828", ch:"#1e1e30",
@@ -90,25 +85,6 @@ function heatOf(s, a) {
   if (s>=65) return "rising";
   if (s>=40) return "steady";
   return "cooling";
-}
-
-/* ─── Gemini API Call ─── */
-async function callGemini(apiKey, prompt) {
-  const res = await fetch(GEMINI_URL(apiKey), {
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({
-      contents:[{ parts:[{ text: prompt }] }],
-      generationConfig:{ temperature:0.7, maxOutputTokens:1200 }
-    })
-  });
-  if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err?.error?.message || `HTTP ${res.status}`);
-  }
-  const d = await res.json();
-  const raw = d.candidates?.[0]?.content?.parts?.[0]?.text || "";
-  return raw.replace(/```json|```/g,"").trim();
 }
 
 /* ─── API Fetchers ─── */
@@ -249,7 +225,6 @@ const ApiKeyModal = ({ onSave, onSkip }) => {
   return (
     <div style={{ position:"fixed",inset:0,background:"#00000095",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:20 }}>
       <div style={{ background:T.s,border:`1px solid ${T.ba}`,borderRadius:18,padding:30,maxWidth:440,width:"100%",animation:"fadeUp .3s ease" }}>
-        {/* Gemini badge */}
         <div style={{ textAlign:"center",marginBottom:20 }}>
           <div style={{ display:"inline-flex",alignItems:"center",gap:8,background:"#4285f420",border:"1px solid #4285f440",borderRadius:10,padding:"8px 16px" }}>
             <span style={{ fontSize:20 }}>🔷</span>
@@ -257,40 +232,32 @@ const ApiKeyModal = ({ onSave, onSkip }) => {
             <span style={{ fontSize:11,background:T.gd,border:`1px solid ${T.gb}`,color:T.g,padding:"2px 7px",borderRadius:5,fontFamily:T.m,fontWeight:700 }}>무료</span>
           </div>
         </div>
-
         <div style={{ fontSize:17,fontWeight:800,marginBottom:8,textAlign:"center" }}>API Key 설정</div>
         <div style={{ fontSize:13,color:T.ts,lineHeight:1.8,marginBottom:20,textAlign:"center" }}>
-          Gemini 1.5 Flash는 <span style={{ color:T.g,fontWeight:700 }}>하루 1,500회 완전 무료</span>입니다.<br/>
+          Gemini 2.0 Flash — <span style={{ color:T.g,fontWeight:700 }}>무료로 AI 분석 & 대본 생성</span><br/>
           신용카드 없이 Google 계정만으로 발급 가능해요.
         </div>
-
-        {/* 발급 방법 */}
         <div style={{ background:T.c,borderRadius:10,padding:14,marginBottom:16,fontSize:12,lineHeight:2,color:T.ts }}>
           <div style={{ color:T.t,fontWeight:700,marginBottom:4 }}>🚀 API Key 무료 발급 (1분)</div>
-          <div>1. <a href="https://aistudio.google.com" target="_blank" rel="noreferrer" style={{ color:"#4285f4" }}>aistudio.google.com</a> 접속</div>
+          <div>1. <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" style={{ color:"#4285f4" }}>aistudio.google.com/apikey</a> 접속</div>
           <div>2. Google 계정으로 로그인</div>
-          <div>3. 상단 <b style={{ color:T.t }}>"Get API Key"</b> 클릭</div>
-          <div>4. <b style={{ color:T.t }}>"Create API Key"</b> → 복사</div>
+          <div>3. <b style={{ color:T.t }}>"Create API Key"</b> 클릭 → 복사</div>
+          <div>4. 아래에 붙여넣기 후 저장</div>
         </div>
-
         <input
           value={key}
-          onChange={e => setKey(e.target.value)}
+          onChange={e=>setKey(e.target.value)}
           placeholder="AIzaSy..."
           type="password"
           style={{ width:"100%",background:T.c,border:`1px solid ${valid?T.gb:T.ba}`,borderRadius:9,padding:"12px 14px",color:T.t,fontSize:13,fontFamily:T.m,marginBottom:12,boxSizing:"border-box",transition:"border .2s" }}
         />
         <div style={{ display:"flex",gap:8 }}>
-          <button onClick={onSkip} style={{ flex:1,padding:12,borderRadius:9,background:"transparent",border:`1px solid ${T.ba}`,color:T.ts,fontSize:13,fontWeight:600,cursor:"pointer" }}>
-            나중에
-          </button>
-          <button onClick={() => valid && onSave(key)} style={{ flex:2,padding:12,borderRadius:9,background:valid?"#4285f4":T.c,border:"none",color:valid?"#fff":T.tm,fontSize:13,fontWeight:700,cursor:valid?"pointer":"not-allowed",transition:"all .2s" }}>
+          <button onClick={onSkip} style={{ flex:1,padding:12,borderRadius:9,background:"transparent",border:`1px solid ${T.ba}`,color:T.ts,fontSize:13,fontWeight:600,cursor:"pointer" }}>나중에</button>
+          <button onClick={()=>valid&&onSave(key)} style={{ flex:2,padding:12,borderRadius:9,background:valid?"#4285f4":T.c,border:"none",color:valid?"#fff":T.tm,fontSize:13,fontWeight:700,cursor:valid?"pointer":"not-allowed",transition:"all .2s" }}>
             ✅ 저장 후 시작
           </button>
         </div>
-        <div style={{ fontSize:10,color:T.tm,textAlign:"center",marginTop:10 }}>
-          키는 브라우저에만 저장 · 외부 전송 없음
-        </div>
+        <div style={{ fontSize:10,color:T.tm,textAlign:"center",marginTop:10 }}>키는 브라우저에만 저장 · 외부 전송 없음</div>
       </div>
     </div>
   );
@@ -313,17 +280,17 @@ export default function TrendRadarV5() {
   const [pipe, setPipe] = useState([]);
   const [auto, setAuto] = useState(true);
   const [fStatus, setFStatus] = useState({});
-  const [apiKey, setApiKey] = useState(() => typeof window!=="undefined" ? localStorage.getItem("tr_gemini_key")||"" : "");
+  const [apiKey, setApiKey] = useState(()=>typeof window!=="undefined"?localStorage.getItem("tr_gemini_key")||"":"");
   const [showApiModal, setShowApiModal] = useState(false);
   const [workflowStep, setWorkflowStep] = useState(0);
   const [apiError, setApiError] = useState("");
   const timer = useRef(null);
   const analysisRef = useRef(null);
 
-  const fetchAll = useCallback(async (showL=true) => {
-    if (showL) setLoading(true);
-    const st = {};
-    const mk = (k,r) => { st[k]={ok:r.length>0,n:r.length}; };
+  const fetchAll = useCallback(async(showL=true)=>{
+    if(showL) setLoading(true);
+    const st={};
+    const mk=(k,r)=>{st[k]={ok:r.length>0,n:r.length};};
     const [hn,rd,gKR,gUS,gGL,nv,ph,gh] = await Promise.all([
       fetchHN().then(r=>{mk("hackernews",r);return r;}),
       fetchRD().then(r=>{mk("reddit",r);return r;}),
@@ -334,20 +301,20 @@ export default function TrendRadarV5() {
       fetchPH().then(r=>{mk("producthunt",r);return r;}),
       fetchGH().then(r=>{mk("github",r);return r;}),
     ]);
-    const all = [...hn,...rd,...gKR,...gUS,...gGL,...nv,...ph,...gh];
-    const scored = all.map(item=>{
+    const all=[...hn,...rd,...gKR,...gUS,...gGL,...nv,...ph,...gh];
+    const scored=all.map(item=>{
       const age=(Date.now()-item.time)/3600000;
       const ts2=scoreItem(item);
-      return {...item,trendScore:ts2,category:classify(item.title),heat:heatOf(ts2,age),ageLabel:timeAgo(item.time)};
+      return{...item,trendScore:ts2,category:classify(item.title),heat:heatOf(ts2,age),ageLabel:timeAgo(item.time)};
     }).sort((a,b)=>b.trendScore-a.trendScore);
     setTrends(scored);
     setLastRefresh(new Date());
     setFStatus(st);
     setLoading(false);
     setWorkflowStep(1);
-  }, []);
+  },[]);
 
-  useEffect(()=>{ fetchAll(); return()=>clearInterval(timer.current); },[]);
+  useEffect(()=>{fetchAll();return()=>clearInterval(timer.current);},[]);
   useEffect(()=>{
     clearInterval(timer.current);
     if(auto) timer.current=setInterval(()=>fetchAll(false),5*60*1000);
@@ -361,83 +328,71 @@ export default function TrendRadarV5() {
     return true;
   });
 
-  const stats = {
+  const stats={
     total:trends.length,
     exp:trends.filter(t2=>t2.heat==="explosive").length,
     rise:trends.filter(t2=>t2.heat==="rising").length,
     src:Object.keys(fStatus).filter(k=>fStatus[k]?.ok).length,
   };
 
-  /* ── AI 분석 (Gemini) ── */
-  const analyze = useCallback(async (trend) => {
-    if (!apiKey) { setShowApiModal(true); return; }
-    setSel(trend); setAL(true); setAnalysis(null); setScript(null); setApiError("");
+  /* ── AI 분석 — 서버 API 경유 ── */
+  const analyze = useCallback(async(trend)=>{
+    if(!apiKey){setShowApiModal(true);return;}
+    setSel(trend);setAL(true);setAnalysis(null);setScript(null);setApiError("");
     setWorkflowStep(2);
     setTimeout(()=>analysisRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),100);
-    try {
-      const prompt = `당신은 "AI × 자기계발" 유튜브 채널 전략가입니다. 타겟: 20-40대 직장인 한국인.
-아래 트렌드를 분석하여 유튜브 콘텐츠 기회를 평가하세요.
-반드시 순수 JSON만 응답하세요. 마크다운 없이.
-
-트렌드: "${trend.title}"
-소스: ${trend.source}
-트렌드점수: ${trend.trendScore}
-열기: ${trend.heat}
-${trend.tagline?`설명: ${trend.tagline}`:""}
-
-응답 형식:
-{"opportunity":숫자1-10,"competition":"낮음 또는 보통 또는 높음","urgency":"즉시 또는 1주내 또는 여유","summary_ko":"2-3문장 한국어 분석","angle":"채널 고유 앵글 한국어","videos":[{"title":"한국어 제목 40자이내","format":"숏폼 또는 롱폼 또는 튜토리얼 또는 분석","views":"예상조회수"},{"title":"...","format":"...","views":"..."},{"title":"...","format":"...","views":"..."}],"tags":["#태그1","#태그2","#태그3","#태그4","#태그5"],"best_time":"업로드 최적 타이밍 한국어"}`;
-
-      const raw = await callGemini(apiKey, prompt);
-      setAnalysis(JSON.parse(raw));
+    try{
+      const res = await fetch("/api/analyze",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({type:"analyze",trend,apiKey}),
+      });
+      const data = await res.json();
+      if(!res.ok) throw new Error(data.error||"분석 실패");
+      setAnalysis(data.result||JSON.parse(data.raw||"{}"));
       setWorkflowStep(3);
-    } catch(e) {
-      setAnalysis({ error:true });
+    }catch(e){
+      setAnalysis({error:true});
       setApiError(e.message||"분석 실패");
     }
     setAL(false);
-  }, [apiKey]);
+  },[apiKey]);
 
-  /* ── 대본 생성 (Gemini) ── */
-  const genScript = useCallback(async (v) => {
-    if (!apiKey) { setShowApiModal(true); return; }
-    setSL(true); setScript(null); setApiError("");
-    try {
-      const prompt = `한국어 유튜브 대본 작성가입니다.
-영상 제목: "${v.title}" (형식: ${v.format})
-순수 JSON만 응답. 마크다운 없이.
-
-{"hook":"15초 오프닝 한국어","sections":[{"ts":"0:00","name":"후킹","desc":"내용 설명 한국어"},{"ts":"0:15","name":"문제제기","desc":"내용 설명 한국어"},{"ts":"2:00","name":"핵심내용","desc":"내용 설명 한국어"},{"ts":"6:00","name":"실전적용","desc":"내용 설명 한국어"},{"ts":"8:00","name":"CTA","desc":"내용 설명 한국어"}],"seo":["키워드1","키워드2","키워드3","키워드4","키워드5"],"desc":"2문장 영상설명 한국어"}`;
-
-      const raw = await callGemini(apiKey, prompt);
-      setScript(JSON.parse(raw));
-    } catch(e) {
-      setScript({ error:true });
+  /* ── 대본 생성 — 서버 API 경유 ── */
+  const genScript = useCallback(async(v)=>{
+    if(!apiKey){setShowApiModal(true);return;}
+    setSL(true);setScript(null);setApiError("");
+    try{
+      const res = await fetch("/api/analyze",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({type:"script",video:v,apiKey}),
+      });
+      const data = await res.json();
+      if(!res.ok) throw new Error(data.error||"대본 생성 실패");
+      setScript(data.result||JSON.parse(data.raw||"{}"));
+    }catch(e){
+      setScript({error:true});
       setApiError(e.message||"대본 생성 실패");
     }
     setSL(false);
-  }, [apiKey]);
+  },[apiKey]);
 
-  const addPipe = (trend, v) => {
+  const addPipe=(trend,v)=>{
     setPipe(p=>[...p,{id:Date.now(),trend:trend.title,video:v.title,format:v.format,stage:"discovered",added:new Date().toLocaleString("ko-KR"),score:trend.trendScore}]);
     setWorkflowStep(4);
   };
-  const moveStage = (id, st2) => setPipe(p=>p.map(i=>i.id===id?{...i,stage:st2}:i));
-  const rmPipe = (id) => setPipe(p=>p.filter(i=>i.id!==id));
+  const moveStage=(id,st2)=>setPipe(p=>p.map(i=>i.id===id?{...i,stage:st2}:i));
+  const rmPipe=(id)=>setPipe(p=>p.filter(i=>i.id!==id));
+  const saveApiKey=(key)=>{localStorage.setItem("tr_gemini_key",key);setApiKey(key);setShowApiModal(false);};
 
-  const saveApiKey = (key) => {
-    localStorage.setItem("tr_gemini_key", key);
-    setApiKey(key);
-    setShowApiModal(false);
-  };
-
-  return (<>
+  return(<>
     <Head>
       <title>Trend Radar v5 — AI 콘텐츠 파이프라인</title>
-      <meta name="viewport" content="width=device-width,initial-scale=1" />
-      <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+      <meta name="viewport" content="width=device-width,initial-scale=1"/>
+      <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
     </Head>
-    <div style={{ minHeight:"100vh",background:T.bg,color:T.t,fontFamily:T.f }}>
+    <div style={{minHeight:"100vh",background:T.bg,color:T.t,fontFamily:T.f}}>
       <style>{`
         @keyframes spin{to{transform:rotate(360deg)}}
         @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
@@ -450,154 +405,147 @@ ${trend.tagline?`설명: ${trend.tagline}`:""}
         a{color:inherit;text-decoration:none}
       `}</style>
 
-      {showApiModal && <ApiKeyModal onSave={saveApiKey} onSkip={()=>setShowApiModal(false)} />}
+      {showApiModal&&<ApiKeyModal onSave={saveApiKey} onSkip={()=>setShowApiModal(false)}/>}
 
       {/* ── Header ── */}
-      <header style={{ padding:"14px 20px",borderBottom:`1px solid ${T.b}`,background:`${T.s}ee`,backdropFilter:"blur(12px)",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100 }}>
-        <div style={{ display:"flex",alignItems:"center",gap:12 }}>
-          <div style={{ width:38,height:38,borderRadius:11,background:`linear-gradient(135deg,${T.ac},${T.cy})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,fontWeight:900,color:"#fff",boxShadow:`0 0 18px ${T.ac}40` }}>T</div>
+      <header style={{padding:"14px 20px",borderBottom:`1px solid ${T.b}`,background:`${T.s}ee`,backdropFilter:"blur(12px)",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100}}>
+        <div style={{display:"flex",alignItems:"center",gap:12}}>
+          <div style={{width:38,height:38,borderRadius:11,background:`linear-gradient(135deg,${T.ac},${T.cy})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,fontWeight:900,color:"#fff",boxShadow:`0 0 18px ${T.ac}40`}}>T</div>
           <div>
-            <div style={{ fontSize:16,fontWeight:900,letterSpacing:"-0.04em",display:"flex",alignItems:"center",gap:8 }}>
+            <div style={{fontSize:16,fontWeight:900,letterSpacing:"-0.04em",display:"flex",alignItems:"center",gap:8}}>
               TREND RADAR
-              <span style={{ fontSize:11,fontFamily:T.m,color:T.r,fontWeight:700,background:T.rd,padding:"2px 6px",borderRadius:4 }}>v5</span>
-              <span style={{ display:"inline-flex",alignItems:"center",gap:5,fontSize:11,color:T.g,fontFamily:T.m,fontWeight:700 }}>
-                <span style={{ width:7,height:7,borderRadius:"50%",background:T.g,animation:"liveDot 2s infinite",display:"inline-block" }}/>
-                LIVE
+              <span style={{fontSize:11,fontFamily:T.m,color:T.r,fontWeight:700,background:T.rd,padding:"2px 6px",borderRadius:4}}>v5</span>
+              <span style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:11,color:T.g,fontFamily:T.m,fontWeight:700}}>
+                <span style={{width:7,height:7,borderRadius:"50%",background:T.g,animation:"liveDot 2s infinite",display:"inline-block"}}/>LIVE
               </span>
             </div>
-            <div style={{ fontSize:11,color:T.ts,fontFamily:T.m,marginTop:1 }}>
+            <div style={{fontSize:11,color:T.ts,fontFamily:T.m,marginTop:1}}>
               {lastRefresh?`갱신 ${lastRefresh.toLocaleTimeString("ko-KR")} · ${stats.total}개 · ${stats.src}/8 소스`:"데이터 수집중..."}
             </div>
           </div>
         </div>
-        <div style={{ display:"flex",gap:8,alignItems:"center" }}>
-          <button onClick={()=>setShowApiModal(true)} style={{ padding:"6px 12px",borderRadius:7,fontSize:11,fontFamily:T.m,fontWeight:700,cursor:"pointer",border:`1px solid ${apiKey?T.gb:T.amb}`,background:apiKey?T.gd:T.amd,color:apiKey?T.g:T.am }}>
+        <div style={{display:"flex",gap:8,alignItems:"center"}}>
+          <button onClick={()=>setShowApiModal(true)} style={{padding:"6px 12px",borderRadius:7,fontSize:11,fontFamily:T.m,fontWeight:700,cursor:"pointer",border:`1px solid ${apiKey?T.gb:T.amb}`,background:apiKey?T.gd:T.amd,color:apiKey?T.g:T.am}}>
             {apiKey?"🔷 Gemini 연결됨":"🔷 API 설정"}
           </button>
-          <button onClick={()=>setAuto(!auto)} style={{ padding:"6px 12px",borderRadius:7,fontSize:11,fontFamily:T.m,fontWeight:700,cursor:"pointer",border:`1px solid ${auto?T.gb:T.ba}`,background:auto?T.gd:"transparent",color:auto?T.g:T.ts }}>
+          <button onClick={()=>setAuto(!auto)} style={{padding:"6px 12px",borderRadius:7,fontSize:11,fontFamily:T.m,fontWeight:700,cursor:"pointer",border:`1px solid ${auto?T.gb:T.ba}`,background:auto?T.gd:"transparent",color:auto?T.g:T.ts}}>
             {auto?"⏱ 자동갱신":"⏸ 수동"}
           </button>
-          <button onClick={()=>fetchAll()} disabled={loading} style={{ padding:"6px 14px",borderRadius:7,fontSize:11,fontFamily:T.m,fontWeight:700,cursor:"pointer",background:T.acd,border:`1px solid ${T.acb}`,color:T.ac,opacity:loading?.5:1 }}>
+          <button onClick={()=>fetchAll()} disabled={loading} style={{padding:"6px 14px",borderRadius:7,fontSize:11,fontFamily:T.m,fontWeight:700,cursor:"pointer",background:T.acd,border:`1px solid ${T.acb}`,color:T.ac,opacity:loading?.5:1}}>
             {loading?"수집중...":"↻ 수집"}
           </button>
         </div>
       </header>
 
       {/* ── Workflow Bar ── */}
-      <div style={{ padding:"14px 20px",background:T.s,borderBottom:`1px solid ${T.b}` }}>
-        <div style={{ fontSize:10,fontFamily:T.m,color:T.tm,marginBottom:10,fontWeight:600,letterSpacing:".08em" }}>WORKFLOW — 콘텐츠 제작 파이프라인</div>
-        <div style={{ display:"flex",alignItems:"center",gap:0 }}>
-          <WorkflowStep label="수집" icon="📡" active={workflowStep===0} done={workflowStep>0} />
-          <div style={{ color:T.tm,fontSize:16,paddingBottom:16,flexShrink:0,margin:"0 2px" }}>›</div>
-          <WorkflowStep label="트렌드선택" icon="🔍" active={workflowStep===1} done={workflowStep>2} />
-          <div style={{ color:T.tm,fontSize:16,paddingBottom:16,flexShrink:0,margin:"0 2px" }}>›</div>
-          <WorkflowStep label="AI분석" icon="🤖" active={workflowStep===2} done={workflowStep>2} />
-          <div style={{ color:T.tm,fontSize:16,paddingBottom:16,flexShrink:0,margin:"0 2px" }}>›</div>
-          <WorkflowStep label="대본생성" icon="✍️" active={workflowStep===3} done={workflowStep>3} />
-          <div style={{ color:T.tm,fontSize:16,paddingBottom:16,flexShrink:0,margin:"0 2px" }}>›</div>
-          <WorkflowStep label="파이프라인" icon="📋" active={workflowStep===4} done={false} />
+      <div style={{padding:"14px 20px",background:T.s,borderBottom:`1px solid ${T.b}`}}>
+        <div style={{fontSize:10,fontFamily:T.m,color:T.tm,marginBottom:10,fontWeight:600,letterSpacing:".08em"}}>WORKFLOW — 콘텐츠 제작 파이프라인</div>
+        <div style={{display:"flex",alignItems:"center",gap:0}}>
+          <WorkflowStep label="수집" icon="📡" active={workflowStep===0} done={workflowStep>0}/>
+          <div style={{color:T.tm,fontSize:16,paddingBottom:16,flexShrink:0,margin:"0 2px"}}>›</div>
+          <WorkflowStep label="트렌드선택" icon="🔍" active={workflowStep===1} done={workflowStep>2}/>
+          <div style={{color:T.tm,fontSize:16,paddingBottom:16,flexShrink:0,margin:"0 2px"}}>›</div>
+          <WorkflowStep label="AI분석" icon="🤖" active={workflowStep===2} done={workflowStep>2}/>
+          <div style={{color:T.tm,fontSize:16,paddingBottom:16,flexShrink:0,margin:"0 2px"}}>›</div>
+          <WorkflowStep label="대본생성" icon="✍️" active={workflowStep===3} done={workflowStep>3}/>
+          <div style={{color:T.tm,fontSize:16,paddingBottom:16,flexShrink:0,margin:"0 2px"}}>›</div>
+          <WorkflowStep label="파이프라인" icon="📋" active={workflowStep===4} done={false}/>
         </div>
-        <div style={{ fontSize:11,marginTop:8,textAlign:"center",fontWeight:600,
-          color:workflowStep===0?T.ts:workflowStep===1?T.am:workflowStep===2?T.ac:workflowStep===3?T.g:T.g,
-          animation:workflowStep===2?"pulse 1.5s infinite":"none" }}>
+        <div style={{fontSize:11,marginTop:8,textAlign:"center",fontWeight:600,
+          color:workflowStep===0?T.ts:workflowStep===1?T.am:workflowStep===2?T.ac:T.g,
+          animation:workflowStep===2?"pulse 1.5s infinite":"none"}}>
           {workflowStep===0&&"⏳ 데이터 수집중..."}
           {workflowStep===1&&"👆 트렌드 카드를 클릭하면 AI 분석이 시작됩니다"}
           {workflowStep===2&&"🤖 Gemini가 콘텐츠 기회를 분석중..."}
-          {workflowStep===3&&"✅ 분석 완료! 아이디어를 선택해 대본을 생성하거나 파이프라인에 추가하세요"}
+          {workflowStep===3&&"✅ 분석 완료! 아이디어를 선택해 대본 생성 또는 파이프라인에 추가하세요"}
           {workflowStep===4&&"🎬 파이프라인 탭에서 제작 단계를 관리하세요"}
         </div>
       </div>
 
-      {/* ── Source Status (클릭 가능) ── */}
-      <div style={{ display:"grid",gridTemplateColumns:"repeat(8,1fr)",borderBottom:`1px solid ${T.b}`,background:T.s2 }}>
+      {/* ── Source Status ── */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(8,1fr)",borderBottom:`1px solid ${T.b}`,background:T.s2}}>
         {Object.entries(SRC).map(([k,v])=>{
           const st2=fStatus[k];
-          return (
+          return(
             <div key={k} onClick={()=>setSrcF(srcF===k?"all":k)}
-              style={{ padding:"10px 4px",borderRight:`1px solid ${T.b}`,textAlign:"center",cursor:"pointer",background:srcF===k?v.b:"transparent",transition:"all .2s" }}>
-              <div style={{ fontSize:18 }}>{v.i}</div>
-              <div style={{ fontSize:16,fontFamily:T.m,fontWeight:800,color:st2?.ok?T.g:loading?T.am:T.r,marginTop:2 }}>{st2?st2.n:"—"}</div>
-              <div style={{ fontSize:9,color:T.tm,fontFamily:T.m,marginTop:1 }}>{v.l}</div>
+              style={{padding:"10px 4px",borderRight:`1px solid ${T.b}`,textAlign:"center",cursor:"pointer",background:srcF===k?v.b:"transparent",transition:"all .2s"}}>
+              <div style={{fontSize:18}}>{v.i}</div>
+              <div style={{fontSize:16,fontFamily:T.m,fontWeight:800,color:st2?.ok?T.g:loading?T.am:T.r,marginTop:2}}>{st2?st2.n:"—"}</div>
+              <div style={{fontSize:9,color:T.tm,fontFamily:T.m,marginTop:1}}>{v.l}</div>
             </div>
           );
         })}
       </div>
 
       {/* ── Stats Bar ── */}
-      <div style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",borderBottom:`1px solid ${T.b}` }}>
-        {[
-          { l:"전체 수집", v:stats.total, c:T.t },
-          { l:"🔥 폭발", v:stats.exp, c:T.r },
-          { l:"📈 상승", v:stats.rise, c:T.am },
-          { l:"활성 소스", v:`${stats.src}/8`, c:T.ac },
-        ].map((s2,i)=>(
-          <div key={i} style={{ padding:"14px 10px",textAlign:"center",borderRight:i<3?`1px solid ${T.b}`:"none" }}>
-            <div style={{ fontSize:10,color:T.ts,fontFamily:T.m,fontWeight:600 }}>{s2.l}</div>
-            <div style={{ fontSize:28,fontWeight:900,color:s2.c,fontFamily:T.m,lineHeight:1.1,marginTop:4 }}>{s2.v}</div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",borderBottom:`1px solid ${T.b}`}}>
+        {[{l:"전체 수집",v:stats.total,c:T.t},{l:"🔥 폭발",v:stats.exp,c:T.r},{l:"📈 상승",v:stats.rise,c:T.am},{l:"활성 소스",v:`${stats.src}/8`,c:T.ac}].map((s2,i)=>(
+          <div key={i} style={{padding:"14px 10px",textAlign:"center",borderRight:i<3?`1px solid ${T.b}`:"none"}}>
+            <div style={{fontSize:10,color:T.ts,fontFamily:T.m,fontWeight:600}}>{s2.l}</div>
+            <div style={{fontSize:28,fontWeight:900,color:s2.c,fontFamily:T.m,lineHeight:1.1,marginTop:4}}>{s2.v}</div>
           </div>
         ))}
       </div>
 
       {/* ── Tabs ── */}
-      <div style={{ display:"flex",borderBottom:`1px solid ${T.b}`,background:T.s }}>
+      <div style={{display:"flex",borderBottom:`1px solid ${T.b}`,background:T.s}}>
         {[{id:"trends",l:"🔍 라이브 트렌드",n:filtered.length},{id:"pipeline",l:"📋 파이프라인",n:pipe.length}].map(tb=>(
           <button key={tb.id} onClick={()=>setTab(tb.id)}
-            style={{ flex:1,padding:"14px",background:"transparent",border:"none",borderBottom:tab===tb.id?`2px solid ${T.ac}`:"2px solid transparent",color:tab===tb.id?T.t:T.tm,fontSize:14,fontWeight:700,cursor:"pointer",transition:"all .2s" }}>
-            {tb.l} <span style={{ fontFamily:T.m,fontSize:11,background:tab===tb.id?T.acd:T.c,padding:"2px 7px",borderRadius:10,marginLeft:4 }}>{tb.n}</span>
+            style={{flex:1,padding:"14px",background:"transparent",border:"none",borderBottom:tab===tb.id?`2px solid ${T.ac}`:"2px solid transparent",color:tab===tb.id?T.t:T.tm,fontSize:14,fontWeight:700,cursor:"pointer",transition:"all .2s"}}>
+            {tb.l} <span style={{fontFamily:T.m,fontSize:11,background:tab===tb.id?T.acd:T.c,padding:"2px 7px",borderRadius:10,marginLeft:4}}>{tb.n}</span>
           </button>
         ))}
       </div>
 
       {/* ══ TRENDS TAB ══ */}
-      {tab==="trends" && <div>
-        <div style={{ padding:"10px 16px",borderBottom:`1px solid ${T.b}` }}>
+      {tab==="trends"&&<div>
+        <div style={{padding:"10px 16px",borderBottom:`1px solid ${T.b}`}}>
           <input value={q} onChange={e=>setQ(e.target.value)} placeholder="🔍 키워드 검색..."
-            style={{ width:"100%",background:T.c,border:`1px solid ${T.b}`,borderRadius:9,padding:"10px 14px",color:T.t,fontSize:13 }} />
+            style={{width:"100%",background:T.c,border:`1px solid ${T.b}`,borderRadius:9,padding:"10px 14px",color:T.t,fontSize:13}}/>
         </div>
-        <div style={{ display:"flex",gap:5,padding:"8px 16px",overflowX:"auto",borderBottom:`1px solid ${T.b}` }}>
+        <div style={{display:"flex",gap:5,padding:"8px 16px",overflowX:"auto",borderBottom:`1px solid ${T.b}`}}>
           {CATS.map(c2=>(
             <button key={c2.id} onClick={()=>setCat(c2.id)}
-              style={{ padding:"5px 12px",borderRadius:16,fontSize:12,fontWeight:700,cursor:"pointer",border:"none",background:cat===c2.id?T.ac:T.c,color:cat===c2.id?"#fff":T.ts,whiteSpace:"nowrap",transition:"all .2s" }}>
+              style={{padding:"5px 12px",borderRadius:16,fontSize:12,fontWeight:700,cursor:"pointer",border:"none",background:cat===c2.id?T.ac:T.c,color:cat===c2.id?"#fff":T.ts,whiteSpace:"nowrap",transition:"all .2s"}}>
               {c2.i} {c2.l}
             </button>
           ))}
         </div>
 
         {loading&&!trends.length&&(
-          <div style={{ padding:60,textAlign:"center" }}>
+          <div style={{padding:60,textAlign:"center"}}>
             <Spin s={32}/>
-            <div style={{ marginTop:16,fontSize:14,color:T.ts,animation:"pulse 1.5s infinite" }}>8개 소스에서 실시간 수집중...</div>
+            <div style={{marginTop:16,fontSize:14,color:T.ts,animation:"pulse 1.5s infinite"}}>8개 소스에서 실시간 수집중...</div>
           </div>
         )}
 
-        {/* ── Trend Cards ── */}
-        <div style={{ padding:"10px 14px" }}>
+        <div style={{padding:"10px 14px"}}>
           {filtered.slice(0,50).map((t2,idx)=>{
             const src=SRC[t2.source]||{};
             const ht=HEAT[t2.heat]||{};
             const isSel=sel?.id===t2.id;
-            return (
+            return(
               <div key={t2.id}
-                style={{ background:isSel?`linear-gradient(135deg,${T.ca},${T.c})`:T.c, border:`1px solid ${isSel?T.acb:T.b}`, borderLeft:`3px solid ${isSel?T.ac:ht.c||T.b}`, borderRadius:12,padding:"14px 16px",marginBottom:8,cursor:"pointer",transition:"all .15s",animation:`fadeUp .3s ease ${idx*.012}s both`,boxShadow:isSel?`0 4px 20px ${T.ac}20`:"none" }}
+                style={{background:isSel?`linear-gradient(135deg,${T.ca},${T.c})`:T.c,border:`1px solid ${isSel?T.acb:T.b}`,borderLeft:`3px solid ${isSel?T.ac:ht.c||T.b}`,borderRadius:12,padding:"14px 16px",marginBottom:8,cursor:"pointer",transition:"all .15s",animation:`fadeUp .3s ease ${idx*.012}s both`,boxShadow:isSel?`0 4px 20px ${T.ac}20`:"none"}}
                 onClick={()=>analyze(t2)}>
-                <div style={{ display:"flex",gap:12,alignItems:"flex-start" }}>
+                <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
                   <ScoreBadge score={t2.trendScore}/>
-                  <div style={{ flex:1,minWidth:0 }}>
-                    <div style={{ display:"flex",gap:5,alignItems:"center",marginBottom:7,flexWrap:"wrap" }}>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{display:"flex",gap:5,alignItems:"center",marginBottom:7,flexWrap:"wrap"}}>
                       <Pill color={ht.c}>{ht.l}</Pill>
                       <Pill color={src.c} bg={src.b}>{src.i} {src.l}</Pill>
                       {t2.sub&&<Pill color={T.tm}>r/{t2.sub}</Pill>}
                       {t2.traffic>0&&<Pill color={T.am}>{t2.traffic.toLocaleString()}+ 검색</Pill>}
                       {t2.stars>0&&<Pill color={T.am}>★{t2.stars.toLocaleString()}</Pill>}
-                      <span style={{ fontSize:10,color:T.tm,fontFamily:T.m,marginLeft:"auto" }}>{t2.ageLabel}</span>
+                      <span style={{fontSize:10,color:T.tm,fontFamily:T.m,marginLeft:"auto"}}>{t2.ageLabel}</span>
                     </div>
-                    <div style={{ fontSize:15,fontWeight:700,lineHeight:1.5,marginBottom:6 }}>{t2.title}</div>
-                    {t2.tagline&&<div style={{ fontSize:11,color:T.ts,marginBottom:6 }}>{t2.tagline}</div>}
+                    <div style={{fontSize:15,fontWeight:700,lineHeight:1.5,marginBottom:6}}>{t2.title}</div>
+                    {t2.tagline&&<div style={{fontSize:11,color:T.ts,marginBottom:6}}>{t2.tagline}</div>}
                     <Bar pct={t2.trendScore} color={t2.trendScore>=80?T.r:t2.trendScore>=55?T.am:T.g}/>
-                    <div style={{ display:"flex",gap:12,marginTop:6,fontSize:11,fontFamily:T.m,color:T.tm }}>
+                    <div style={{display:"flex",gap:12,marginTop:6,fontSize:11,fontFamily:T.m,color:T.tm}}>
                       {t2.score>0&&<span>▲ {t2.score.toLocaleString()}</span>}
                       {t2.comments>0&&<span>💬 {t2.comments.toLocaleString()}</span>}
-                      <span style={{ marginLeft:"auto",color:T.ac,fontWeight:600 }}>클릭 → AI 분석 시작</span>
+                      <span style={{marginLeft:"auto",color:T.ac,fontWeight:600}}>클릭 → AI 분석 시작</span>
                     </div>
                   </div>
                 </div>
@@ -605,76 +553,73 @@ ${trend.tagline?`설명: ${trend.tagline}`:""}
             );
           })}
           {!loading&&!filtered.length&&(
-            <div style={{ textAlign:"center",padding:48,color:T.tm }}>해당 조건에 맞는 트렌드가 없습니다</div>
+            <div style={{textAlign:"center",padding:48,color:T.tm}}>해당 조건에 맞는 트렌드가 없습니다</div>
           )}
         </div>
 
         {/* ── Analysis Panel ── */}
         {(aL||analysis)&&sel&&(
-          <div ref={analysisRef} style={{ margin:"0 14px 14px",background:T.s2,border:`1px solid ${T.acb}`,borderRadius:14,overflow:"hidden",animation:"fadeUp .25s ease" }}>
-            <div style={{ padding:"16px 18px",borderBottom:`1px solid ${T.b}`,display:"flex",alignItems:"center",gap:10,background:`linear-gradient(135deg,${T.acd},transparent)` }}>
-              <span style={{ fontSize:22 }}>🤖</span>
-              <div style={{ flex:1 }}>
-                <div style={{ fontSize:14,fontWeight:800 }}>AI 콘텐츠 분석 <span style={{ fontSize:10,color:"#4285f4",fontFamily:T.m,fontWeight:700,background:"#4285f415",padding:"2px 6px",borderRadius:4 }}>Gemini</span></div>
-                <div style={{ fontSize:11,color:T.ts,fontFamily:T.m,marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{sel.title}</div>
+          <div ref={analysisRef} style={{margin:"0 14px 14px",background:T.s2,border:`1px solid ${T.acb}`,borderRadius:14,overflow:"hidden",animation:"fadeUp .25s ease"}}>
+            <div style={{padding:"16px 18px",borderBottom:`1px solid ${T.b}`,display:"flex",alignItems:"center",gap:10,background:`linear-gradient(135deg,${T.acd},transparent)`}}>
+              <span style={{fontSize:22}}>🤖</span>
+              <div style={{flex:1}}>
+                <div style={{fontSize:14,fontWeight:800}}>AI 콘텐츠 분석 <span style={{fontSize:10,color:"#4285f4",fontFamily:T.m,fontWeight:700,background:"#4285f415",padding:"2px 6px",borderRadius:4}}>Gemini</span></div>
+                <div style={{fontSize:11,color:T.ts,fontFamily:T.m,marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{sel.title}</div>
               </div>
               {aL&&<Spin/>}
-              <button onClick={()=>{setSel(null);setAnalysis(null);setScript(null);}} style={{ width:28,height:28,borderRadius:7,background:T.c,border:`1px solid ${T.b}`,color:T.ts,cursor:"pointer",fontSize:14 }}>✕</button>
+              <button onClick={()=>{setSel(null);setAnalysis(null);setScript(null);}} style={{width:28,height:28,borderRadius:7,background:T.c,border:`1px solid ${T.b}`,color:T.ts,cursor:"pointer",fontSize:14}}>✕</button>
             </div>
-
-            {aL&&<div style={{ padding:48,textAlign:"center" }}><Spin s={24}/><div style={{ marginTop:12,fontSize:13,color:T.ts,animation:"pulse 1.5s infinite" }}>Gemini가 분석중...</div></div>}
-
-            {apiError&&<div style={{ padding:16,background:T.rd,margin:14,borderRadius:9,fontSize:12,color:T.r }}>⚠️ {apiError} — API Key를 확인해주세요.</div>}
-
-            {analysis&&!analysis.error&&<div style={{ padding:16 }}>
-              <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:14 }}>
+            {aL&&<div style={{padding:48,textAlign:"center"}}><Spin s={24}/><div style={{marginTop:12,fontSize:13,color:T.ts,animation:"pulse 1.5s infinite"}}>Gemini가 분석중...</div></div>}
+            {apiError&&<div style={{padding:16,margin:14,background:T.rd,borderRadius:9,fontSize:12,color:T.r}}>⚠️ {apiError}</div>}
+            {analysis&&!analysis.error&&<div style={{padding:16}}>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:14}}>
                 {[{l:"기회점수",v:`${analysis.opportunity}/10`,c:T.ac},{l:"경쟁강도",v:analysis.competition,c:T.t},{l:"시급성",v:analysis.urgency,c:analysis.urgency==="즉시"?T.r:T.am}].map((s2,i)=>(
-                  <div key={i} style={{ background:T.c,borderRadius:10,padding:"14px 10px",textAlign:"center" }}>
-                    <div style={{ fontSize:10,color:T.ts,fontFamily:T.m,fontWeight:600 }}>{s2.l}</div>
-                    <div style={{ fontSize:20,fontWeight:900,color:s2.c,fontFamily:T.m,marginTop:4 }}>{s2.v}</div>
+                  <div key={i} style={{background:T.c,borderRadius:10,padding:"14px 10px",textAlign:"center"}}>
+                    <div style={{fontSize:10,color:T.ts,fontFamily:T.m,fontWeight:600}}>{s2.l}</div>
+                    <div style={{fontSize:20,fontWeight:900,color:s2.c,fontFamily:T.m,marginTop:4}}>{s2.v}</div>
                   </div>
                 ))}
               </div>
-              {analysis.summary_ko&&<div style={{ background:T.c,borderRadius:10,padding:14,marginBottom:10 }}><div style={{ fontSize:10,color:T.ts,fontFamily:T.m,fontWeight:600,marginBottom:6 }}>📊 분석 요약</div><div style={{ fontSize:13,lineHeight:1.7 }}>{analysis.summary_ko}</div></div>}
-              {analysis.angle&&<div style={{ background:`${T.ac}0c`,border:`1px solid ${T.acb}`,borderRadius:10,padding:12,marginBottom:10 }}><div style={{ fontSize:10,color:T.ac,fontFamily:T.m,fontWeight:700,marginBottom:4 }}>💡 채널 앵글</div><div style={{ fontSize:13,lineHeight:1.6 }}>{analysis.angle}</div></div>}
-              {analysis.best_time&&<div style={{ background:T.amd,border:`1px solid ${T.amb}`,borderRadius:10,padding:12,marginBottom:14,display:"flex",gap:10,alignItems:"center" }}><span style={{ fontSize:18 }}>⏰</span><div><div style={{ fontSize:10,color:T.am,fontFamily:T.m,fontWeight:700 }}>업로드 타이밍</div><div style={{ fontSize:13,marginTop:2 }}>{analysis.best_time}</div></div></div>}
-              <div style={{ fontSize:11,color:T.ts,fontFamily:T.m,fontWeight:700,marginBottom:8,letterSpacing:".05em" }}>🎬 영상 아이디어</div>
+              {analysis.summary_ko&&<div style={{background:T.c,borderRadius:10,padding:14,marginBottom:10}}><div style={{fontSize:10,color:T.ts,fontFamily:T.m,fontWeight:600,marginBottom:6}}>📊 분석 요약</div><div style={{fontSize:13,lineHeight:1.7}}>{analysis.summary_ko}</div></div>}
+              {analysis.angle&&<div style={{background:`${T.ac}0c`,border:`1px solid ${T.acb}`,borderRadius:10,padding:12,marginBottom:10}}><div style={{fontSize:10,color:T.ac,fontFamily:T.m,fontWeight:700,marginBottom:4}}>💡 채널 앵글</div><div style={{fontSize:13,lineHeight:1.6}}>{analysis.angle}</div></div>}
+              {analysis.best_time&&<div style={{background:T.amd,border:`1px solid ${T.amb}`,borderRadius:10,padding:12,marginBottom:14,display:"flex",gap:10,alignItems:"center"}}><span style={{fontSize:18}}>⏰</span><div><div style={{fontSize:10,color:T.am,fontFamily:T.m,fontWeight:700}}>업로드 타이밍</div><div style={{fontSize:13,marginTop:2}}>{analysis.best_time}</div></div></div>}
+              <div style={{fontSize:11,color:T.ts,fontFamily:T.m,fontWeight:700,marginBottom:8,letterSpacing:".05em"}}>🎬 영상 아이디어</div>
               {(analysis.videos||[]).map((v,i)=>(
-                <div key={i} style={{ background:T.c,border:`1px solid ${T.b}`,borderRadius:10,padding:14,marginBottom:8 }}>
-                  <div style={{ fontSize:14,fontWeight:800,marginBottom:8 }}>{v.title}</div>
-                  <div style={{ display:"flex",gap:5,marginBottom:12 }}><Pill>{v.format}</Pill><Pill color={T.g}>예상 {v.views}</Pill></div>
-                  <div style={{ display:"flex",gap:8 }}>
-                    <button onClick={e=>{e.stopPropagation();addPipe(sel,v);}} style={{ flex:1,padding:"9px",borderRadius:8,background:T.acd,border:`1px solid ${T.acb}`,color:T.ac,fontSize:12,fontWeight:700,cursor:"pointer" }}>📋 파이프라인</button>
-                    <button onClick={e=>{e.stopPropagation();genScript(v);}} style={{ flex:1,padding:"9px",borderRadius:8,background:T.gd,border:`1px solid ${T.gb}`,color:T.g,fontSize:12,fontWeight:700,cursor:"pointer" }}>✍️ 대본 생성</button>
+                <div key={i} style={{background:T.c,border:`1px solid ${T.b}`,borderRadius:10,padding:14,marginBottom:8}}>
+                  <div style={{fontSize:14,fontWeight:800,marginBottom:8}}>{v.title}</div>
+                  <div style={{display:"flex",gap:5,marginBottom:12}}><Pill>{v.format}</Pill><Pill color={T.g}>예상 {v.views}</Pill></div>
+                  <div style={{display:"flex",gap:8}}>
+                    <button onClick={e=>{e.stopPropagation();addPipe(sel,v);}} style={{flex:1,padding:"9px",borderRadius:8,background:T.acd,border:`1px solid ${T.acb}`,color:T.ac,fontSize:12,fontWeight:700,cursor:"pointer"}}>📋 파이프라인</button>
+                    <button onClick={e=>{e.stopPropagation();genScript(v);}} style={{flex:1,padding:"9px",borderRadius:8,background:T.gd,border:`1px solid ${T.gb}`,color:T.g,fontSize:12,fontWeight:700,cursor:"pointer"}}>✍️ 대본 생성</button>
                   </div>
                 </div>
               ))}
-              {analysis.tags&&<div style={{ display:"flex",gap:4,flexWrap:"wrap",marginTop:10 }}>{analysis.tags.map((tg,i)=><Pill key={i} color={T.ac} bg={T.acd}>{tg}</Pill>)}</div>}
+              {analysis.tags&&<div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:10}}>{analysis.tags.map((tg,i)=><Pill key={i} color={T.ac} bg={T.acd}>{tg}</Pill>)}</div>}
             </div>}
           </div>
         )}
 
         {/* ── Script Panel ── */}
         {(sL||script)&&(
-          <div style={{ margin:"0 14px 14px",background:T.s2,border:`1px solid ${T.gb}`,borderRadius:14,overflow:"hidden",animation:"fadeUp .25s ease" }}>
-            <div style={{ padding:"16px 18px",borderBottom:`1px solid ${T.b}`,display:"flex",alignItems:"center",gap:10,background:`linear-gradient(135deg,${T.gd},transparent)` }}>
-              <span style={{ fontSize:22 }}>✍️</span>
-              <div style={{ fontSize:14,fontWeight:800 }}>AI 대본 초안</div>
-              {sL&&<div style={{ marginLeft:"auto" }}><Spin c={T.g}/></div>}
+          <div style={{margin:"0 14px 14px",background:T.s2,border:`1px solid ${T.gb}`,borderRadius:14,overflow:"hidden",animation:"fadeUp .25s ease"}}>
+            <div style={{padding:"16px 18px",borderBottom:`1px solid ${T.b}`,display:"flex",alignItems:"center",gap:10,background:`linear-gradient(135deg,${T.gd},transparent)`}}>
+              <span style={{fontSize:22}}>✍️</span>
+              <div style={{fontSize:14,fontWeight:800}}>AI 대본 초안</div>
+              {sL&&<div style={{marginLeft:"auto"}}><Spin c={T.g}/></div>}
             </div>
-            {sL&&<div style={{ padding:48,textAlign:"center" }}><Spin s={24} c={T.g}/><div style={{ marginTop:12,fontSize:13,color:T.ts,animation:"pulse 1.5s infinite" }}>대본 생성중...</div></div>}
-            {script&&!script.error&&<div style={{ padding:16 }}>
-              {script.hook&&<div style={{ background:`${T.ac}0c`,border:`1px solid ${T.acb}`,borderRadius:10,padding:14,marginBottom:12 }}><div style={{ fontSize:10,color:T.ac,fontFamily:T.m,fontWeight:700,marginBottom:6 }}>🎯 오프닝 후킹 (15초)</div><div style={{ fontSize:14,lineHeight:1.7,fontStyle:"italic" }}>"{script.hook}"</div></div>}
+            {sL&&<div style={{padding:48,textAlign:"center"}}><Spin s={24} c={T.g}/><div style={{marginTop:12,fontSize:13,color:T.ts,animation:"pulse 1.5s infinite"}}>대본 생성중...</div></div>}
+            {script&&!script.error&&<div style={{padding:16}}>
+              {script.hook&&<div style={{background:`${T.ac}0c`,border:`1px solid ${T.acb}`,borderRadius:10,padding:14,marginBottom:12}}><div style={{fontSize:10,color:T.ac,fontFamily:T.m,fontWeight:700,marginBottom:6}}>🎯 오프닝 후킹 (15초)</div><div style={{fontSize:14,lineHeight:1.7,fontStyle:"italic"}}>"{script.hook}"</div></div>}
               {(script.sections||[]).map((sec,i)=>(
-                <div key={i} style={{ display:"flex",gap:12,marginBottom:6,padding:"12px 14px",background:T.c,borderRadius:9,border:`1px solid ${T.b}` }}>
-                  <div style={{ flexShrink:0,minWidth:52 }}>
-                    <div style={{ fontSize:11,color:T.ac,fontFamily:T.m,fontWeight:700 }}>{sec.ts}</div>
-                    <div style={{ fontSize:12,fontWeight:800,marginTop:2 }}>{sec.name}</div>
+                <div key={i} style={{display:"flex",gap:12,marginBottom:6,padding:"12px 14px",background:T.c,borderRadius:9,border:`1px solid ${T.b}`}}>
+                  <div style={{flexShrink:0,minWidth:52}}>
+                    <div style={{fontSize:11,color:T.ac,fontFamily:T.m,fontWeight:700}}>{sec.ts}</div>
+                    <div style={{fontSize:12,fontWeight:800,marginTop:2}}>{sec.name}</div>
                   </div>
-                  <div style={{ fontSize:12,color:T.ts,lineHeight:1.6,borderLeft:`2px solid ${T.b}`,paddingLeft:12 }}>{sec.desc}</div>
+                  <div style={{fontSize:12,color:T.ts,lineHeight:1.6,borderLeft:`2px solid ${T.b}`,paddingLeft:12}}>{sec.desc}</div>
                 </div>
               ))}
-              {script.desc&&<div style={{ background:T.c,borderRadius:9,padding:12,marginTop:10 }}><div style={{ fontSize:10,color:T.tm,fontFamily:T.m,fontWeight:600,marginBottom:4 }}>📝 영상 설명문</div><div style={{ fontSize:12,lineHeight:1.6,color:T.ts }}>{script.desc}</div></div>}
+              {script.desc&&<div style={{background:T.c,borderRadius:9,padding:12,marginTop:10}}><div style={{fontSize:10,color:T.tm,fontFamily:T.m,fontWeight:600,marginBottom:4}}>📝 영상 설명문</div><div style={{fontSize:12,lineHeight:1.6,color:T.ts}}>{script.desc}</div></div>}
             </div>}
           </div>
         )}
@@ -682,23 +627,23 @@ ${trend.tagline?`설명: ${trend.tagline}`:""}
 
       {/* ══ PIPELINE TAB ══ */}
       {tab==="pipeline"&&(
-        <div style={{ padding:16,animation:"fadeUp .3s ease" }}>
+        <div style={{padding:16,animation:"fadeUp .3s ease"}}>
           {!pipe.length?(
-            <div style={{ textAlign:"center",padding:60,color:T.tm }}>
-              <div style={{ fontSize:48,marginBottom:12 }}>📋</div>
-              <div style={{ fontSize:16,fontWeight:700,marginBottom:8 }}>파이프라인이 비어있습니다</div>
-              <div style={{ fontSize:13,color:T.ts,lineHeight:1.8 }}>트렌드 클릭 → AI 분석 → 영상 아이디어 → 파이프라인 추가</div>
+            <div style={{textAlign:"center",padding:60,color:T.tm}}>
+              <div style={{fontSize:48,marginBottom:12}}>📋</div>
+              <div style={{fontSize:16,fontWeight:700,marginBottom:8}}>파이프라인이 비어있습니다</div>
+              <div style={{fontSize:13,color:T.ts,lineHeight:1.8}}>트렌드 클릭 → AI 분석 → 영상 아이디어 → 파이프라인 추가</div>
             </div>
           ):(
             <>
-              <div style={{ display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:6,marginBottom:20 }}>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:6,marginBottom:20}}>
                 {STAGES.map(s2=>{
                   const cnt=pipe.filter(p=>p.stage===s2.id).length;
-                  return (
-                    <div key={s2.id} style={{ background:T.c,border:`1px solid ${cnt>0?s2.c+"40":T.b}`,borderRadius:10,padding:"12px 8px",textAlign:"center" }}>
-                      <div style={{ fontSize:20 }}>{s2.i}</div>
-                      <div style={{ fontSize:11,fontWeight:700,color:s2.c,fontFamily:T.m,marginTop:4 }}>{s2.l}</div>
-                      <div style={{ fontSize:24,fontWeight:900,color:cnt>0?s2.c:T.tm,fontFamily:T.m }}>{cnt}</div>
+                  return(
+                    <div key={s2.id} style={{background:T.c,border:`1px solid ${cnt>0?s2.c+"40":T.b}`,borderRadius:10,padding:"12px 8px",textAlign:"center"}}>
+                      <div style={{fontSize:20}}>{s2.i}</div>
+                      <div style={{fontSize:11,fontWeight:700,color:s2.c,fontFamily:T.m,marginTop:4}}>{s2.l}</div>
+                      <div style={{fontSize:24,fontWeight:900,color:cnt>0?s2.c:T.tm,fontFamily:T.m}}>{cnt}</div>
                     </div>
                   );
                 })}
@@ -706,29 +651,29 @@ ${trend.tagline?`설명: ${trend.tagline}`:""}
               {STAGES.map(stage=>{
                 const items=pipe.filter(p=>p.stage===stage.id);
                 if(!items.length) return null;
-                return (
-                  <div key={stage.id} style={{ marginBottom:18 }}>
-                    <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:10,padding:"8px 14px",background:T.s2,borderRadius:9,border:`1px solid ${stage.c}20` }}>
-                      <span style={{ fontSize:18 }}>{stage.i}</span>
-                      <span style={{ fontSize:14,fontWeight:800,color:stage.c }}>{stage.l}</span>
-                      <span style={{ fontSize:11,color:T.tm,fontFamily:T.m }}>({items.length}개)</span>
+                return(
+                  <div key={stage.id} style={{marginBottom:18}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,padding:"8px 14px",background:T.s2,borderRadius:9,border:`1px solid ${stage.c}20`}}>
+                      <span style={{fontSize:18}}>{stage.i}</span>
+                      <span style={{fontSize:14,fontWeight:800,color:stage.c}}>{stage.l}</span>
+                      <span style={{fontSize:11,color:T.tm,fontFamily:T.m}}>({items.length}개)</span>
                     </div>
                     {items.map(item=>(
-                      <div key={item.id} style={{ background:T.c,border:`1px solid ${T.b}`,borderLeft:`3px solid ${stage.c}`,borderRadius:10,padding:14,marginBottom:8 }}>
-                        <div style={{ fontSize:14,fontWeight:800,marginBottom:4 }}>{item.video}</div>
-                        <div style={{ fontSize:11,color:T.ts,marginBottom:10 }}>원본: {item.trend.slice(0,50)}...</div>
-                        <div style={{ display:"flex",gap:5,marginBottom:10,flexWrap:"wrap" }}>
+                      <div key={item.id} style={{background:T.c,border:`1px solid ${T.b}`,borderLeft:`3px solid ${stage.c}`,borderRadius:10,padding:14,marginBottom:8}}>
+                        <div style={{fontSize:14,fontWeight:800,marginBottom:4}}>{item.video}</div>
+                        <div style={{fontSize:11,color:T.ts,marginBottom:10}}>원본: {item.trend.slice(0,50)}...</div>
+                        <div style={{display:"flex",gap:5,marginBottom:10,flexWrap:"wrap"}}>
                           <Pill>{item.format}</Pill>
                           <Pill color={T.am}>트렌드 {item.score}점</Pill>
                           <Pill color={T.tm}>{item.added}</Pill>
                         </div>
-                        <div style={{ display:"flex",gap:5,flexWrap:"wrap" }}>
+                        <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
                           {STAGES.filter(s2=>s2.id!==stage.id).map(s2=>(
-                            <button key={s2.id} onClick={()=>moveStage(item.id,s2.id)} style={{ padding:"6px 10px",borderRadius:6,background:`${s2.c}12`,border:`1px solid ${s2.c}30`,color:s2.c,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:T.m }}>
+                            <button key={s2.id} onClick={()=>moveStage(item.id,s2.id)} style={{padding:"6px 10px",borderRadius:6,background:`${s2.c}12`,border:`1px solid ${s2.c}30`,color:s2.c,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:T.m}}>
                               {s2.i} {s2.l}
                             </button>
                           ))}
-                          <button onClick={()=>rmPipe(item.id)} style={{ padding:"6px 10px",borderRadius:6,background:T.rd,border:`1px solid ${T.rb}`,color:T.r,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:T.m,marginLeft:"auto" }}>✕ 삭제</button>
+                          <button onClick={()=>rmPipe(item.id)} style={{padding:"6px 10px",borderRadius:6,background:T.rd,border:`1px solid ${T.rb}`,color:T.r,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:T.m,marginLeft:"auto"}}>✕ 삭제</button>
                         </div>
                       </div>
                     ))}
@@ -740,13 +685,12 @@ ${trend.tagline?`설명: ${trend.tagline}`:""}
         </div>
       )}
 
-      <div style={{ padding:"20px 16px",borderTop:`1px solid ${T.b}`,textAlign:"center",marginTop:8 }}>
-        <div style={{ fontSize:10,color:T.tm,fontFamily:T.m,lineHeight:2 }}>
-          TREND RADAR v5.0 · Powered by <span style={{ color:"#4285f4" }}>Google Gemini 1.5 Flash</span> (무료 1,500회/일)<br/>
+      <div style={{padding:"20px 16px",borderTop:`1px solid ${T.b}`,textAlign:"center",marginTop:8}}>
+        <div style={{fontSize:10,color:T.tm,fontFamily:T.m,lineHeight:2}}>
+          TREND RADAR v5.0 · Powered by <span style={{color:"#4285f4"}}>Google Gemini 2.0 Flash</span> (무료)<br/>
           HackerNews · Reddit · Google Trends KR/US/Global · 네이버뉴스 · ProductHunt · GitHub Trending
         </div>
       </div>
     </div>
   </>);
 }
-
