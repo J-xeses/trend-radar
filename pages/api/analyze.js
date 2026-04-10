@@ -1,120 +1,92 @@
-Visual Studio Code 1.115
+// pages/api/analyze.js
+// OpenRouter 무료 API 사용 — 신용카드 불필요, 하루 200회 무료
+// 모델: meta-llama/llama-3.3-70b-instruct:free (GPT-4 수준 성능)
 
-Show release notes after an update
+const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
+const FREE_MODEL = "meta-llama/llama-3.3-70b-instruct:free";
 
-Follow us on LinkedIn, X, Bluesky | View online | 
+export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
 
-Release date: April 8, 2026
+  const { type, trend, video, apiKey } = req.body;
 
-Welcome to the 1.115 release of Visual Studio Code. This release makes your agent-native development experience even better with the introduction of the new VS Code Agents companion app!
+  if (!apiKey) {
+    return res.status(400).json({ error: "OpenRouter API Key가 필요합니다." });
+  }
 
-VS Code Agents app: a new companion app optimized for agent-native development, running alongside VS Code Insiders.
+  let prompt = "";
 
-Integrated browser: several improvements to make working with the integrated browser more seamless for agents.
+  if (type === "analyze") {
+    prompt = `당신은 "AI × 자기계발" 유튜브 채널 전략가입니다. 타겟: 20-40대 직장인 한국인.
+아래 트렌드를 분석하여 유튜브 콘텐츠 기회를 평가하세요.
+반드시 순수 JSON만 응답하세요. 마크다운 코드블록 없이, JSON 객체만.
 
-Terminal tools: new capabilities for agents to interact with background terminals.
+트렌드: "${trend.title}"
+소스: ${trend.source}
+트렌드점수: ${trend.trendScore}
+열기: ${trend.heat}
+${trend.tagline ? `설명: ${trend.tagline}` : ""}
 
-Happy Coding!
+반드시 아래 형식의 JSON만 반환:
+{"opportunity":8,"competition":"보통","urgency":"즉시","summary_ko":"한국어 분석 2-3문장","angle":"채널 고유 앵글 한국어","videos":[{"title":"한국어 제목 40자이내","format":"숏폼","views":"10만~50만"},{"title":"제목2","format":"롱폼","views":"5만~20만"},{"title":"제목3","format":"튜토리얼","views":"3만~10만"}],"tags":["#태그1","#태그2","#태그3","#태그4","#태그5"],"best_time":"업로드 최적 타이밍 한국어"}`;
+  } else if (type === "script") {
+    prompt = `한국어 유튜브 대본 작성가입니다.
+영상 제목: "${video.title}" (형식: ${video.format})
+반드시 순수 JSON만 응답. 마크다운 코드블록 없이.
 
-VS Code is rolling out gradually to all users. Use Check for Updates in VS Code to get the latest version immediately.
+반드시 아래 형식의 JSON만 반환:
+{"hook":"15초 오프닝 한국어 문장","sections":[{"ts":"0:00","name":"후킹","desc":"내용 설명"},{"ts":"0:15","name":"문제제기","desc":"내용 설명"},{"ts":"2:00","name":"핵심내용","desc":"내용 설명"},{"ts":"6:00","name":"실전적용","desc":"내용 설명"},{"ts":"8:00","name":"CTA","desc":"내용 설명"}],"seo":["키워드1","키워드2","키워드3","키워드4","키워드5"],"desc":"2문장 영상설명 한국어"}`;
+  } else {
+    return res.status(400).json({ error: "type은 analyze 또는 script 여야 합니다." });
+  }
 
-To try new features as soon as possible, download the nightly Insiders build, which includes the latest updates as soon as they are available.
+  try {
+    const response = await fetch(OPENROUTER_URL, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://trend-radar-gamma.vercel.app",
+        "X-Title": "Trend Radar",
+      },
+      body: JSON.stringify({
+        model: FREE_MODEL,
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.7,
+        max_tokens: 1200,
+      }),
+    });
 
-In this update
-Visual Studio Code Agents (Preview)
-Integrated browser
-Terminal tools improvements
-Deprecated features and settings
-Notable fixes
-Thank you
-Visual Studio Code Agents (Preview)
-Visual Studio Code Agents is a new preview companion app that ships alongside VS Code Insiders, built for agent-native development.
+    if (!response.ok) {
+      const errData = await response.json();
+      const errMsg = errData?.error?.message || `OpenRouter 오류 (${response.status})`;
+      return res.status(response.status).json({ error: errMsg });
+    }
 
-Parallelize tasks across projects - Kick off agent sessions across multiple repos in parallel (each isolated in its own worktree), quickly switch context (with UI that adapts to your selection), and iterate on human and agentic reviews.
+    const data = await response.json();
+    const raw = data.choices?.[0]?.message?.content || "";
 
-Monitor and review - Track session progress, view diffs inline, leave feedback for agents, and create pull requests without leaving the app.
+    // JSON 파싱 — 마크다운 코드블록 제거 후 파싱
+    const cleaned = raw.replace(/```json\n?|\n?```/g, "").trim();
 
-Your customizations carry over - Custom instructions, prompt files, custom agents, MCP servers, hooks, and plugins all work in the Agents app, along with your other VS Code customizations like themes, for example.
+    // JSON 시작/끝 위치 찾기 (안전한 파싱)
+    const jsonStart = cleaned.indexOf("{");
+    const jsonEnd = cleaned.lastIndexOf("}");
+    if (jsonStart === -1 || jsonEnd === -1) {
+      return res.status(200).json({ raw: cleaned });
+    }
 
-No extra install - The app ships alongside VS Code Insiders. Launch it from your Start menu or Applications folder in the OS, or run Chat: Open Agents Application from the Command Palette.
+    const jsonStr = cleaned.slice(jsonStart, jsonEnd + 1);
 
-The Agents app is a rapidly evolving preview. It's currently only available in VS Code Insiders, and we're looking forward to getting your feedback in GitHub issues.
-
-Screenshot of the VS Code Agents app with a session and changes open.
-
-Integrated browser
-This release, we continue to further enhance the integrated browser experience and its capabilities for agents.
-
-Browser agent tools improvements
-Setting:   workbench.browser.enableChatTools
-
-Better tool labels
-When an agent invokes the browser tool, the tool calls now have a more descriptive label and a link to go directly to the target browser tab.
-
-Old:
-Screenshot of a tool call saying "Clicked element in browser".
-
-New:
-Screenshot of a tool call saying "Right-clicked header banner in Test Page", with a link to Test Page.
-
-Long-running script support
-The Run Playwright Code tool has improved support for long-running scripts. Scripts that take longer than five seconds to run (by default) now return a deferred result for the agent to poll.
-
-Fewer duplicate tabs
-Agents are now more heavily discouraged from repetitively opening browser tabs. Now, when an agent attempts to open a new tab and an available tab is already open to the same host, no new tab is opened unless an explicit flag is passed by the agent.
-
-Pinch-to-zoom in the integrated browser (macOS)
-The integrated browser now supports pinch-to-zoom on macOS. Use the trackpad pinch gesture to magnify web page content up to 3x.
-
-Unlike the standard browser zoom (Ctrl+= / Ctrl+-), pinch-to-zoom is a purely visual magnification and doesn't reflow the page layout.
-
-
-Terminal tools improvements
-This release improves the agent experience for running terminal commands in the background.
-
-Send input to background terminals
-Previously, background terminals were read-only, with only get_terminal_output available. This was particularly limiting when a foreground terminal timed out and moved to the background, as the agent could no longer interact with it.
-
-With the new send_to_terminal tool, the agent can continue interacting with background terminals. For example, if an SSH session times out while waiting for a password prompt, the agent can still send the required input to complete the connection.
-
-Background terminal notifications (Experimental)
-Setting:   chat.tools.terminal.backgroundNotifications
-
-Previously, when a terminal command was running in the background, the agent had to manually call get_terminal_output to check on its status. There was no way to know when the command completed or needed input.
-
-With the new experimental   chat.tools.terminal.backgroundNotifications setting, the agent is automatically notified when a background terminal command finishes or requires user input. This also applies to foreground terminals that time out and are moved to the background. The agent can then take appropriate action, such as reviewing the output or providing input via the send_to_terminal tool.
-
-Deprecated features and settings
-New deprecations in this release
-None
-
-Upcoming deprecations
-Edit Mode is officially deprecated as of VS Code version 1.110. Users can temporarily re-enable Edit Mode via VS Code setting   chat.editMode.hidden . This setting will remain supported through version 1.125. Beginning with version 1.125, Edit Mode will be fully removed and can no longer be enabled via settings.
-Notable fixes
-vscode#304257 - terminal restart for integrated pwsh can cause cursor to go to wrong location
-vscode#304679 - Caps Lock key inserts raw escape sequence "[57358u" in Claude Code inside VS Code terminal
-Thank you
-Contributions to our issue tracking:
-
-@gjsjohnmurray (John Murray)
-@RedCMD (RedCMD)
-@IllusionMH (Andrii Dieiev)
-@albertosantini (Alberto Santini)
-Contributions to vscode:
-
-@andysharman: feat: add A/B test for default new session mode PR #306532
-@chetanr-25: Improve type safety for dynamic stylesheet rules PR #288651
-@danplischke (Dan Plischke): Add default-folder, default-workspace and disable-telemetry to serve-web CLI PR #299512
-@mossgowild (moss): fix: prevent catastrophic regex backtracking in _extractImagesFromOutput PR #307447
-@xingsy97 (xingsy97): comments: fix memory leak when recycling tree items in comment panel PR #304666
-@yogeshwaran-c (Yogeshwaran C)
-fix: scope editor service in window title to own editor groups container PR #306226
-fix: preserve 'Wait for Breakpoint' selection when reopening breakpoint widget PR #306564
-fix: include additional toggles in find input arrow key navigation PR #306559
-feat: show coverage indicators in minimap PR #307250
-fix: improve test coverage filter quickpick readability PR #306562
-fix: treat unrecognized @-prefixed text as regular filter in test explorer PR #307555
-We really appreciate people trying our new features as soon as they are ready, so check back here often and learn what's new.
-
-If you'd like to read release notes for previous VS Code versions, go to Updates on code.visualstudio.com.
-
+    try {
+      const parsed = JSON.parse(jsonStr);
+      return res.status(200).json({ result: parsed });
+    } catch {
+      return res.status(200).json({ raw: cleaned });
+    }
+  } catch (err) {
+    return res.status(500).json({ error: err.message || "서버 오류가 발생했습니다." });
+  }
+}
