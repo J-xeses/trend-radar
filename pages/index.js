@@ -234,7 +234,7 @@ const ApiKeyModal = ({ onSave, onSkip }) => {
         </div>
         <div style={{ fontSize:17,fontWeight:800,marginBottom:8,textAlign:"center" }}>API Key 설정</div>
         <div style={{ fontSize:13,color:T.ts,lineHeight:1.8,marginBottom:20,textAlign:"center" }}>
-          Gemini 2.0 Flash — <span style={{ color:T.g,fontWeight:700 }}>무료로 AI 분석 & 대본 생성</span><br/>
+          OpenRouter (Llama 3.3 70B) — <span style={{ color:T.g,fontWeight:700 }}>무료로 AI 분석 & 대본 생성</span><br/>
           신용카드 없이 Google 계정만으로 발급 가능해요.
         </div>
         <div style={{ background:T.c,borderRadius:10,padding:14,marginBottom:16,fontSize:12,lineHeight:2,color:T.ts }}>
@@ -280,7 +280,7 @@ export default function TrendRadarV5() {
   const [pipe, setPipe] = useState([]);
   const [auto, setAuto] = useState(true);
   const [fStatus, setFStatus] = useState({});
-  const [apiKey, setApiKey] = useState(()=>typeof window!=="undefined"?localStorage.getItem("tr_gemini_key")||"":"");
+  const [apiKey, setApiKey] = useState(()=>typeof window!=="undefined"?localStorage.getItem("tr_openrouter_key")||"":"");
   const [showApiModal, setShowApiModal] = useState(false);
   const [workflowStep, setWorkflowStep] = useState(0);
   const [apiError, setApiError] = useState("");
@@ -384,7 +384,7 @@ export default function TrendRadarV5() {
   };
   const moveStage=(id,st2)=>setPipe(p=>p.map(i=>i.id===id?{...i,stage:st2}:i));
   const rmPipe=(id)=>setPipe(p=>p.filter(i=>i.id!==id));
-  const saveApiKey=(key)=>{localStorage.setItem("tr_gemini_key",key);setApiKey(key);setShowApiModal(false);};
+  const saveApiKey=(key)=>{localStorage.setItem("tr_openrouter_key",key);setApiKey(key);setShowApiModal(false);};
 
   return(<>
     <Head>
@@ -426,7 +426,7 @@ export default function TrendRadarV5() {
         </div>
         <div style={{display:"flex",gap:8,alignItems:"center"}}>
           <button onClick={()=>setShowApiModal(true)} style={{padding:"6px 12px",borderRadius:7,fontSize:11,fontFamily:T.m,fontWeight:700,cursor:"pointer",border:`1px solid ${apiKey?T.gb:T.amb}`,background:apiKey?T.gd:T.amd,color:apiKey?T.g:T.am}}>
-            {apiKey?"🔷 Gemini 연결됨":"🔷 API 설정"}
+            {apiKey?"🟢 OpenRouter 연결됨":"🟢 API 설정"}
           </button>
           <button onClick={()=>setAuto(!auto)} style={{padding:"6px 12px",borderRadius:7,fontSize:11,fontFamily:T.m,fontWeight:700,cursor:"pointer",border:`1px solid ${auto?T.gb:T.ba}`,background:auto?T.gd:"transparent",color:auto?T.g:T.ts}}>
             {auto?"⏱ 자동갱신":"⏸ 수동"}
@@ -687,7 +687,7 @@ export default function TrendRadarV5() {
 
       <div style={{padding:"20px 16px",borderTop:`1px solid ${T.b}`,textAlign:"center",marginTop:8}}>
         <div style={{fontSize:10,color:T.tm,fontFamily:T.m,lineHeight:2}}>
-          TREND RADAR v5.0 · Powered by <span style={{color:"#4285f4"}}>Google Gemini 2.0 Flash</span> (무료)<br/>
+          TREND RADAR v5.0 · Powered by <span style={{color:"#4285f4"}}>Google OpenRouter (Llama 3.3 70B)</span> (무료)<br/>
           HackerNews · Reddit · Google Trends KR/US/Global · 네이버뉴스 · ProductHunt · GitHub Trending
         </div>
       </div>
