@@ -1,58 +1,9 @@
 // pages/api/analyze.js
-// OpenRouter 무료 API — 신용카드 불필요
-// 폴백 모델 포함 (안정성 강화)
+// Claude Haiku 4.5 사용 — 가장 저렴하고 빠름
+// 분석 1회당 약 $0.0003 → $5로 약 15,000회 가능
 
-const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-
-// 무료 모델 우선순위 (앞에서부터 시도)
-const FREE_MODELS = [
-  "meta-llama/llama-3.1-8b-instruct:free",
-  "meta-llama/llama-3.3-70b-instruct:free",
-  "mistralai/mistral-7b-instruct:free",
-  "google/gemma-3-4b-it:free",
-];
-
-async function callWithFallback(apiKey, messages) {
-  for (const model of FREE_MODELS) {
-    try {
-      const response = await fetch(OPENROUTER_URL, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-          "HTTP-Referer": "https://trend-radar-gamma.vercel.app",
-          "X-Title": "Trend Radar",
-        },
-        body: JSON.stringify({
-          model,
-          messages,
-          temperature: 0.7,
-          max_tokens: 1200,
-        }),
-      });
-
-      if (!response.ok) {
-        const err = await response.json();
-        const msg = err?.error?.message || "";
-        // Provider 오류면 다음 모델로
-        if (response.status === 502 || response.status === 503 || msg.includes("Provider")) {
-          continue;
-        }
-        throw new Error(msg || `오류 ${response.status}`);
-      }
-
-      const data = await response.json();
-      const content = data.choices?.[0]?.message?.content || "";
-      if (!content) continue;
-      return { content, model };
-    } catch (e) {
-      // 마지막 모델이면 에러 던지기
-      if (model === FREE_MODELS[FREE_MODELS.length - 1]) throw e;
-      continue;
-    }
-  }
-  throw new Error("모든 모델에서 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
-}
+const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
+const MODEL = "claude-haiku-4-5-20251001";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -62,7 +13,7 @@ export default async function handler(req, res) {
   const { type, trend, video, apiKey } = req.body;
 
   if (!apiKey) {
-    return res.status(400).json({ error: "OpenRouter API Key가 필요합니다." });
+    return res.status(400).json({ error: "API Key가 필요합니다." });
   }
 
   let prompt = "";
@@ -92,26 +43,46 @@ ${trend.tagline ? `설명: ${trend.tagline}` : ""}
   }
 
   try {
-    const { content, model } = await callWithFallback(apiKey, [
-      { role: "user", content: prompt }
-    ]);
+    const response = await fetch(ANTHROPIC_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: 1200,
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+
+    if (!response.ok) {
+      const errData = await response.json();
+      return res.status(response.status).json({
+        error: errData?.error?.message || `Claude API 오류 (${response.status})`,
+      });
+    }
+
+    const data = await response.json();
+    const raw = data.content?.[0]?.text || "";
 
     // JSON 파싱
-    const cleaned = content.replace(/```json\n?|\n?```/g, "").trim();
+    const cleaned = raw.replace(/```json\n?|\n?```/g, "").trim();
     const jsonStart = cleaned.indexOf("{");
     const jsonEnd = cleaned.lastIndexOf("}");
 
     if (jsonStart === -1 || jsonEnd === -1) {
-      return res.status(200).json({ raw: cleaned, usedModel: model });
+      return res.status(200).json({ raw: cleaned });
     }
 
     const jsonStr = cleaned.slice(jsonStart, jsonEnd + 1);
 
     try {
       const parsed = JSON.parse(jsonStr);
-      return res.status(200).json({ result: parsed, usedModel: model });
+      return res.status(200).json({ result: parsed });
     } catch {
-      return res.status(200).json({ raw: cleaned, usedModel: model });
+      return res.status(200).json({ raw: cleaned });
     }
   } catch (err) {
     return res.status(500).json({ error: err.message || "서버 오류" });
