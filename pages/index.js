@@ -284,6 +284,16 @@ export default function TrendRadarV5() {
   const [showApiModal, setShowApiModal] = useState(false);
   const [workflowStep, setWorkflowStep] = useState(0);
   const [apiError, setApiError] = useState("");
+  // 유튜브 벤치마킹
+  const [ytKeyword, setYtKeyword] = useState("");
+  const [ytVideos, setYtVideos] = useState([
+    {id:1,title:"",channel:"",views:"",likes:"",uploadDate:""},
+    {id:2,title:"",channel:"",views:"",likes:"",uploadDate:""},
+    {id:3,title:"",channel:"",views:"",likes:"",uploadDate:""},
+  ]);
+  const [ytLoading, setYtLoading] = useState(false);
+  const [ytResult, setYtResult] = useState(null);
+  const [ytError, setYtError] = useState("");
   const timer = useRef(null);
   const analysisRef = useRef(null);
 
@@ -378,6 +388,30 @@ export default function TrendRadarV5() {
     setSL(false);
   },[apiKey]);
 
+  /* ── 유튜브 벤치마킹 분석 ── */
+  const benchmarkYoutube = useCallback(async()=>{
+    if(!apiKey){setShowApiModal(true);return;}
+    const validVideos = ytVideos.filter(v=>v.title.trim());
+    if(!ytKeyword.trim()||validVideos.length<1){
+      setYtError("키워드와 영상 정보를 최소 1개 이상 입력해주세요.");
+      return;
+    }
+    setYtLoading(true);setYtResult(null);setYtError("");
+    try{
+      const res = await fetch("/api/analyze",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({type:"youtube_benchmark",keyword:ytKeyword,videos:validVideos,apiKey}),
+      });
+      const data = await res.json();
+      if(!res.ok) throw new Error(data.error||"벤치마킹 분석 실패");
+      setYtResult(data.result||JSON.parse(data.raw||"{}"));
+    }catch(e){
+      setYtError(e.message||"분석 실패");
+    }
+    setYtLoading(false);
+  },[apiKey,ytKeyword,ytVideos]);
+
   const addPipe=(trend,v)=>{
     setPipe(p=>[...p,{id:Date.now(),trend:trend.title,video:v.title,format:v.format,stage:"discovered",added:new Date().toLocaleString("ko-KR"),score:trend.trendScore}]);
     setWorkflowStep(4);
@@ -414,7 +448,7 @@ export default function TrendRadarV5() {
           <div>
             <div style={{fontSize:16,fontWeight:900,letterSpacing:"-0.04em",display:"flex",alignItems:"center",gap:8}}>
               TREND RADAR
-              <span style={{fontSize:11,fontFamily:T.m,color:T.r,fontWeight:700,background:T.rd,padding:"2px 6px",borderRadius:4}}>v5</span>
+              <span style={{fontSize:11,fontFamily:T.m,color:T.r,fontWeight:700,background:T.rd,padding:"2px 6px",borderRadius:4}}>v6</span>
               <span style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:11,color:T.g,fontFamily:T.m,fontWeight:700}}>
                 <span style={{width:7,height:7,borderRadius:"50%",background:T.g,animation:"liveDot 2s infinite",display:"inline-block"}}/>LIVE
               </span>
@@ -489,10 +523,10 @@ export default function TrendRadarV5() {
 
       {/* ── Tabs ── */}
       <div style={{display:"flex",borderBottom:`1px solid ${T.b}`,background:T.s}}>
-        {[{id:"trends",l:"🔍 라이브 트렌드",n:filtered.length},{id:"pipeline",l:"📋 파이프라인",n:pipe.length}].map(tb=>(
+        {[{id:"trends",l:"🔍 라이브 트렌드",n:filtered.length},{id:"youtube",l:"📺 유튜브 벤치마킹",n:0},{id:"pipeline",l:"📋 파이프라인",n:pipe.length}].map(tb=>(
           <button key={tb.id} onClick={()=>setTab(tb.id)}
-            style={{flex:1,padding:"14px",background:"transparent",border:"none",borderBottom:tab===tb.id?`2px solid ${T.ac}`:"2px solid transparent",color:tab===tb.id?T.t:T.tm,fontSize:14,fontWeight:700,cursor:"pointer",transition:"all .2s"}}>
-            {tb.l} <span style={{fontFamily:T.m,fontSize:11,background:tab===tb.id?T.acd:T.c,padding:"2px 7px",borderRadius:10,marginLeft:4}}>{tb.n}</span>
+            style={{flex:1,padding:"14px",background:"transparent",border:"none",borderBottom:tab===tb.id?`2px solid ${T.ac}`:"2px solid transparent",color:tab===tb.id?T.t:T.tm,fontSize:13,fontWeight:700,cursor:"pointer",transition:"all .2s"}}>
+            {tb.l}{tb.id!=="youtube"&&<span style={{fontFamily:T.m,fontSize:11,background:tab===tb.id?T.acd:T.c,padding:"2px 7px",borderRadius:10,marginLeft:4}}>{tb.n}</span>}
           </button>
         ))}
       </div>
@@ -624,6 +658,202 @@ export default function TrendRadarV5() {
           </div>
         )}
       </div>}
+
+      {/* ══ YOUTUBE BENCHMARKING TAB ══ */}
+      {tab==="youtube"&&(
+        <div style={{padding:16,animation:"fadeUp .3s ease"}}>
+
+          {/* 안내 배너 */}
+          <div style={{background:`${T.cy}0c`,border:`1px solid ${T.cyb}`,borderRadius:12,padding:14,marginBottom:16,display:"flex",gap:10,alignItems:"flex-start"}}>
+            <span style={{fontSize:20,flexShrink:0}}>📺</span>
+            <div>
+              <div style={{fontSize:13,fontWeight:700,color:T.cy,marginBottom:3}}>유튜브 벤치마킹 분석</div>
+              <div style={{fontSize:12,color:T.ts,lineHeight:1.7}}>
+                트렌드 레이더에서 발견한 주제를 유튜브에서 검색 → 상위 영상 정보 입력 → AI가 제목 패턴, 후킹 방식, 차별화 각도를 분석해드려요.
+              </div>
+            </div>
+          </div>
+
+          {/* 키워드 입력 */}
+          <div style={{marginBottom:14}}>
+            <div style={{fontSize:11,color:T.ts,fontFamily:T.m,fontWeight:600,marginBottom:6}}>분석 키워드 (트렌드 레이더에서 발견한 주제)</div>
+            <input
+              value={ytKeyword}
+              onChange={e=>setYtKeyword(e.target.value)}
+              placeholder="예: AI 직장인 자동화, ChatGPT 업무활용..."
+              style={{width:"100%",background:T.c,border:`1px solid ${ytKeyword?T.acb:T.b}`,borderRadius:9,padding:"10px 14px",color:T.t,fontSize:13,boxSizing:"border-box"}}
+            />
+          </div>
+
+          {/* 영상 입력 안내 */}
+          <div style={{fontSize:11,color:T.ts,fontFamily:T.m,fontWeight:600,marginBottom:8}}>
+            유튜브에서 키워드 검색 후 상위 영상 정보 입력 (최대 5개)
+          </div>
+          <div style={{background:`${T.am}0c`,border:`1px solid ${T.amb}`,borderRadius:9,padding:10,marginBottom:12,fontSize:11,color:T.am,lineHeight:1.8}}>
+            💡 유튜브 검색 → 조회수 높은 영상 클릭 → 제목/채널명/조회수/좋아요/업로드날짜 입력
+          </div>
+
+          {/* 영상 입력 폼 */}
+          {ytVideos.map((v,i)=>(
+            <div key={v.id} style={{background:T.c,border:`1px solid ${T.b}`,borderRadius:10,padding:12,marginBottom:8}}>
+              <div style={{fontSize:11,fontWeight:700,color:T.ac,fontFamily:T.m,marginBottom:8}}>영상 {i+1}</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr",gap:6}}>
+                <input
+                  value={v.title}
+                  onChange={e=>setYtVideos(prev=>prev.map((p,j)=>j===i?{...p,title:e.target.value}:p))}
+                  placeholder="영상 제목"
+                  style={{background:T.s2,border:`1px solid ${T.b}`,borderRadius:7,padding:"8px 10px",color:T.t,fontSize:12,width:"100%",boxSizing:"border-box"}}
+                />
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+                  <input
+                    value={v.channel}
+                    onChange={e=>setYtVideos(prev=>prev.map((p,j)=>j===i?{...p,channel:e.target.value}:p))}
+                    placeholder="채널명"
+                    style={{background:T.s2,border:`1px solid ${T.b}`,borderRadius:7,padding:"8px 10px",color:T.t,fontSize:12,boxSizing:"border-box"}}
+                  />
+                  <input
+                    value={v.views}
+                    onChange={e=>setYtVideos(prev=>prev.map((p,j)=>j===i?{...p,views:e.target.value}:p))}
+                    placeholder="조회수 (예: 120만)"
+                    style={{background:T.s2,border:`1px solid ${T.b}`,borderRadius:7,padding:"8px 10px",color:T.t,fontSize:12,boxSizing:"border-box"}}
+                  />
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+                  <input
+                    value={v.likes}
+                    onChange={e=>setYtVideos(prev=>prev.map((p,j)=>j===i?{...p,likes:e.target.value}:p))}
+                    placeholder="좋아요 (예: 3.2만)"
+                    style={{background:T.s2,border:`1px solid ${T.b}`,borderRadius:7,padding:"8px 10px",color:T.t,fontSize:12,boxSizing:"border-box"}}
+                  />
+                  <input
+                    value={v.uploadDate}
+                    onChange={e=>setYtVideos(prev=>prev.map((p,j)=>j===i?{...p,uploadDate:e.target.value}:p))}
+                    placeholder="업로드 날짜 (예: 2주 전)"
+                    style={{background:T.s2,border:`1px solid ${T.b}`,borderRadius:7,padding:"8px 10px",color:T.t,fontSize:12,boxSizing:"border-box"}}
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {/* 영상 추가 버튼 */}
+          {ytVideos.length < 5 && (
+            <button
+              onClick={()=>setYtVideos(prev=>[...prev,{id:Date.now(),title:"",channel:"",views:"",likes:"",uploadDate:""}])}
+              style={{width:"100%",padding:"9px",borderRadius:9,background:"transparent",border:`1px dashed ${T.ba}`,color:T.ts,fontSize:12,fontWeight:600,cursor:"pointer",marginBottom:14}}>
+              + 영상 추가
+            </button>
+          )}
+
+          {/* 에러 */}
+          {ytError&&<div style={{padding:12,background:T.rd,borderRadius:9,fontSize:12,color:T.r,marginBottom:12}}>⚠️ {ytError}</div>}
+
+          {/* 분석 버튼 */}
+          <button
+            onClick={benchmarkYoutube}
+            disabled={ytLoading}
+            style={{width:"100%",padding:"13px",borderRadius:10,background:ytLoading?T.c:`linear-gradient(135deg,${T.cy},${T.ac})`,border:"none",color:ytLoading?T.ts:"#fff",fontSize:14,fontWeight:800,cursor:ytLoading?"not-allowed":"pointer",marginBottom:16}}>
+            {ytLoading?"🔍 AI 분석중...":"📺 유튜브 벤치마킹 분석 시작"}
+          </button>
+
+          {/* 로딩 */}
+          {ytLoading&&(
+            <div style={{textAlign:"center",padding:32}}>
+              <Spin s={28} c={T.cy}/>
+              <div style={{marginTop:12,fontSize:13,color:T.ts,animation:"pulse 1.5s infinite"}}>Claude가 영상 패턴을 분석중...</div>
+            </div>
+          )}
+
+          {/* 결과 */}
+          {ytResult&&!ytLoading&&(
+            <div style={{animation:"fadeUp .3s ease"}}>
+              <div style={{fontSize:12,fontWeight:700,color:T.cy,fontFamily:T.m,marginBottom:10,letterSpacing:".05em"}}>📊 벤치마킹 분석 결과</div>
+
+              {/* 제목 패턴 */}
+              {ytResult.title_patterns&&(
+                <div style={{background:T.c,borderRadius:10,padding:14,marginBottom:10}}>
+                  <div style={{fontSize:11,color:T.ts,fontFamily:T.m,fontWeight:600,marginBottom:8}}>🎯 제목 패턴</div>
+                  {ytResult.title_patterns.map((p,i)=>(
+                    <div key={i} style={{fontSize:12,padding:"5px 0",borderBottom:i<ytResult.title_patterns.length-1?`1px solid ${T.b}`:"none",color:T.t}}>
+                      <span style={{color:T.ac,fontFamily:T.m,fontSize:10,marginRight:6}}>{i+1}</span>{p}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* 후킹 방식 + 공통 구성 */}
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
+                {ytResult.hook_styles&&(
+                  <div style={{background:T.c,borderRadius:10,padding:12}}>
+                    <div style={{fontSize:11,color:T.ts,fontFamily:T.m,fontWeight:600,marginBottom:6}}>⚡ 후킹 방식</div>
+                    {ytResult.hook_styles.map((h,i)=>(
+                      <div key={i} style={{fontSize:11,color:T.t,padding:"3px 0"}}>{h}</div>
+                    ))}
+                  </div>
+                )}
+                {ytResult.thumbnail_keywords&&(
+                  <div style={{background:T.c,borderRadius:10,padding:12}}>
+                    <div style={{fontSize:11,color:T.ts,fontFamily:T.m,fontWeight:600,marginBottom:6}}>🖼️ 썸네일 키워드</div>
+                    <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+                      {ytResult.thumbnail_keywords.map((k,i)=>(
+                        <span key={i} style={{fontSize:10,padding:"2px 7px",borderRadius:4,background:T.acd,color:T.ac,fontWeight:600}}>{k}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* 왜 인기있나 */}
+              {ytResult.why_popular&&(
+                <div style={{background:T.c,borderRadius:10,padding:14,marginBottom:10}}>
+                  <div style={{fontSize:11,color:T.ts,fontFamily:T.m,fontWeight:600,marginBottom:6}}>🔥 조회수 높은 이유</div>
+                  <div style={{fontSize:12,lineHeight:1.7,color:T.t}}>{ytResult.why_popular}</div>
+                </div>
+              )}
+
+              {/* 차별화 각도 + 내 채널 각도 */}
+              <div style={{display:"grid",gridTemplateColumns:"1fr",gap:8,marginBottom:10}}>
+                {ytResult.gap&&(
+                  <div style={{background:`${T.g}0c`,border:`1px solid ${T.gb}`,borderRadius:10,padding:12}}>
+                    <div style={{fontSize:11,color:T.g,fontFamily:T.m,fontWeight:700,marginBottom:4}}>💡 차별화 빈틈</div>
+                    <div style={{fontSize:12,lineHeight:1.6}}>{ytResult.gap}</div>
+                  </div>
+                )}
+                {ytResult.my_angle&&(
+                  <div style={{background:`${T.ac}0c`,border:`1px solid ${T.acb}`,borderRadius:10,padding:12}}>
+                    <div style={{fontSize:11,color:T.ac,fontFamily:T.m,fontWeight:700,marginBottom:4}}>🎬 내 채널 활용 각도</div>
+                    <div style={{fontSize:12,lineHeight:1.6}}>{ytResult.my_angle}</div>
+                  </div>
+                )}
+              </div>
+
+              {/* 추천 제목 + 업로드 타이밍 */}
+              <div style={{background:T.s2,border:`1px solid ${T.cyb}`,borderRadius:10,padding:14,marginBottom:10}}>
+                <div style={{fontSize:11,color:T.cy,fontFamily:T.m,fontWeight:700,marginBottom:6}}>✨ AI 추천</div>
+                {ytResult.recommended_title&&(
+                  <div style={{fontSize:14,fontWeight:800,color:T.t,marginBottom:8}}>"{ytResult.recommended_title}"</div>
+                )}
+                <div style={{display:"flex",gap:12,fontSize:11,color:T.ts}}>
+                  {ytResult.best_upload_time&&<span>⏰ {ytResult.best_upload_time}</span>}
+                  {ytResult.estimated_views&&<span>👁️ 예상 {ytResult.estimated_views}</span>}
+                </div>
+              </div>
+
+              {/* 파이프라인 추가 버튼 */}
+              {ytResult.recommended_title&&(
+                <button
+                  onClick={()=>{
+                    setPipe(p=>[...p,{id:Date.now(),trend:`[벤치마킹] ${ytKeyword}`,video:ytResult.recommended_title,format:"롱폼",stage:"discovered",added:new Date().toLocaleString("ko-KR"),score:90}]);
+                    setTab("pipeline");
+                  }}
+                  style={{width:"100%",padding:"11px",borderRadius:9,background:T.acd,border:`1px solid ${T.acb}`,color:T.ac,fontSize:13,fontWeight:700,cursor:"pointer"}}>
+                  📋 추천 영상 파이프라인에 추가
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ══ PIPELINE TAB ══ */}
       {tab==="pipeline"&&(
