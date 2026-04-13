@@ -723,13 +723,13 @@ export default function TrendRadarV5() {
                 <div style={{marginTop:6,display:"flex",alignItems:"center",gap:6}}>
                   <span style={{fontSize:10,color:T.ts,fontFamily:T.m}}>유튜브 검색어:</span>
                   <a
-                    href={`https://www.youtube.com/results?search_query=${encodeURIComponent(ytKeyword)}&sp=CAM%253D`}
+                    href={`https://www.youtube.com/results?search_query=${encodeURIComponent(ytKeyword)}&sp=EgIIBQ%253D%253D`}
                     target="_blank"
                     rel="noreferrer"
                     style={{fontSize:11,color:T.cy,fontWeight:700,background:T.cyd,padding:"3px 10px",borderRadius:12,border:`1px solid ${T.cyb}`,textDecoration:"none"}}>
                     🔴 유튜브에서 "{ytKeyword}" 검색 →
                   </a>
-                  <span style={{fontSize:10,color:T.tm}}>(조회수순 정렬)</span>
+                  <span style={{fontSize:10,color:T.tm}}>(최근 1개월 · 조회수순)</span>
                 </div>
               )}
               {!ytKeyword&&(
