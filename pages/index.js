@@ -294,6 +294,10 @@ export default function TrendRadarV5() {
   const [ytLoading, setYtLoading] = useState(false);
   const [ytResult, setYtResult] = useState(null);
   const [ytError, setYtError] = useState("");
+  // 교차 분석
+  const [crossLoading, setCrossLoading] = useState(false);
+  const [crossResult, setCrossResult] = useState(null);
+  const [crossError, setCrossError] = useState("");
   const timer = useRef(null);
   const analysisRef = useRef(null);
 
@@ -360,7 +364,7 @@ export default function TrendRadarV5() {
       const data = await res.json();
       if(!res.ok) throw new Error(data.error||"분석 실패");
       setAnalysis(data.result||JSON.parse(data.raw||"{}"));
-      setWorkflowStep(3);
+      setWorkflowStep(2);
     }catch(e){
       setAnalysis({error:true});
       setApiError(e.message||"분석 실패");
@@ -389,6 +393,36 @@ export default function TrendRadarV5() {
   },[apiKey]);
 
   /* ── 유튜브 벤치마킹 분석 ── */
+  /* ── 교차 분석 — 트렌드 vs 유튜브 핵심 기능 ── */
+  const runCrossAnalysis = useCallback(async()=>{
+    if(!apiKey){setShowApiModal(true);return;}
+    if(!analysis||!ytResult){
+      setCrossError("트렌드 AI 분석과 유튜브 벤치마킹 분석을 모두 완료해야 합니다.");
+      return;
+    }
+    setCrossLoading(true);setCrossResult(null);setCrossError("");
+    try{
+      const res = await fetch("/api/analyze",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          type:"cross_analysis",
+          trendAnalysis:{...analysis, title:sel?.title||"", tags:analysis.tags||[]},
+          ytAnalysis:{...ytResult, keyword:ytKeyword},
+          apiKey
+        }),
+      });
+      const data = await res.json();
+      if(!res.ok) throw new Error(data.error||"교차 분석 실패");
+      setCrossResult(data.result||JSON.parse(data.raw||"{}"));
+      setWorkflowStep(4);
+      setTab("pipeline");
+    }catch(e){
+      setCrossError(e.message||"교차 분석 실패");
+    }
+    setCrossLoading(false);
+  },[apiKey,analysis,ytResult,ytKeyword,sel]);
+
   const benchmarkYoutube = useCallback(async()=>{
     if(!apiKey){setShowApiModal(true);return;}
     const validVideos = ytVideos.filter(v=>v.title.trim());
@@ -406,6 +440,8 @@ export default function TrendRadarV5() {
       const data = await res.json();
       if(!res.ok) throw new Error(data.error||"벤치마킹 분석 실패");
       setYtResult(data.result||JSON.parse(data.raw||"{}"));
+      setWorkflowStep(3);
+      setTab("cross");
     }catch(e){
       setYtError(e.message||"분석 실패");
     }
@@ -476,23 +512,23 @@ export default function TrendRadarV5() {
         <div style={{fontSize:10,fontFamily:T.m,color:T.tm,marginBottom:10,fontWeight:600,letterSpacing:".08em"}}>WORKFLOW — 콘텐츠 제작 파이프라인</div>
         <div style={{display:"flex",alignItems:"center",gap:0}}>
           <WorkflowStep label="수집" icon="📡" active={workflowStep===0} done={workflowStep>0}/>
-          <div style={{color:T.tm,fontSize:16,paddingBottom:16,flexShrink:0,margin:"0 2px"}}>›</div>
-          <WorkflowStep label="트렌드선택" icon="🔍" active={workflowStep===1} done={workflowStep>2}/>
-          <div style={{color:T.tm,fontSize:16,paddingBottom:16,flexShrink:0,margin:"0 2px"}}>›</div>
-          <WorkflowStep label="AI분석" icon="🤖" active={workflowStep===2} done={workflowStep>2}/>
-          <div style={{color:T.tm,fontSize:16,paddingBottom:16,flexShrink:0,margin:"0 2px"}}>›</div>
-          <WorkflowStep label="대본생성" icon="✍️" active={workflowStep===3} done={workflowStep>3}/>
-          <div style={{color:T.tm,fontSize:16,paddingBottom:16,flexShrink:0,margin:"0 2px"}}>›</div>
+          <div style={{color:T.tm,fontSize:14,paddingBottom:16,flexShrink:0,margin:"0 1px"}}>›</div>
+          <WorkflowStep label="AI분석" icon="🤖" active={workflowStep===1} done={workflowStep>1}/>
+          <div style={{color:T.tm,fontSize:14,paddingBottom:16,flexShrink:0,margin:"0 1px"}}>›</div>
+          <WorkflowStep label="유튜브" icon="📺" active={workflowStep===2} done={workflowStep>2}/>
+          <div style={{color:T.tm,fontSize:14,paddingBottom:16,flexShrink:0,margin:"0 1px"}}>›</div>
+          <WorkflowStep label="교차분석" icon="⚡" active={workflowStep===3} done={workflowStep>3}/>
+          <div style={{color:T.tm,fontSize:14,paddingBottom:16,flexShrink:0,margin:"0 1px"}}>›</div>
           <WorkflowStep label="파이프라인" icon="📋" active={workflowStep===4} done={false}/>
         </div>
         <div style={{fontSize:11,marginTop:8,textAlign:"center",fontWeight:600,
-          color:workflowStep===0?T.ts:workflowStep===1?T.am:workflowStep===2?T.ac:T.g,
-          animation:workflowStep===2?"pulse 1.5s infinite":"none"}}>
-          {workflowStep===0&&"⏳ 데이터 수집중..."}
-          {workflowStep===1&&"👆 트렌드 카드를 클릭하면 AI 분석이 시작됩니다"}
-          {workflowStep===2&&"🤖 Gemini가 콘텐츠 기회를 분석중..."}
-          {workflowStep===3&&"✅ 분석 완료! 아이디어를 선택해 대본 생성 또는 파이프라인에 추가하세요"}
-          {workflowStep===4&&"🎬 파이프라인 탭에서 제작 단계를 관리하세요"}
+          color:workflowStep===0?T.ts:workflowStep===1?T.ac:workflowStep===2?T.cy:workflowStep===3?T.r:T.g,
+          animation:workflowStep===1||workflowStep===3?"pulse 1.5s infinite":"none"}}>
+          {workflowStep===0&&"👆 트렌드 카드 클릭 → AI 분석 시작"}
+          {workflowStep===1&&"🤖 Claude가 콘텐츠 기회를 분석중..."}
+          {workflowStep===2&&"📺 유튜브 벤치마킹 탭에서 경쟁 영상을 분석하세요"}
+          {workflowStep===3&&"⚡ 교차분석 탭에서 블루오션 각도를 찾으세요!"}
+          {workflowStep===4&&"🎬 파이프라인에서 제작 단계를 관리하세요"}
         </div>
       </div>
 
@@ -522,11 +558,18 @@ export default function TrendRadarV5() {
       </div>
 
       {/* ── Tabs ── */}
-      <div style={{display:"flex",borderBottom:`1px solid ${T.b}`,background:T.s}}>
-        {[{id:"trends",l:"🔍 라이브 트렌드",n:filtered.length},{id:"youtube",l:"📺 유튜브 벤치마킹",n:0},{id:"pipeline",l:"📋 파이프라인",n:pipe.length}].map(tb=>(
+      <div style={{display:"flex",borderBottom:`1px solid ${T.b}`,background:T.s,overflowX:"auto"}}>
+        {[
+          {id:"trends",   l:"🔍 트렌드",      n:filtered.length},
+          {id:"youtube",  l:"📺 유튜브",       n:null},
+          {id:"cross",    l:"⚡ 교차분석",     n:null, hot:!!(analysis&&ytResult)},
+          {id:"pipeline", l:"📋 파이프라인",   n:pipe.length},
+        ].map(tb=>(
           <button key={tb.id} onClick={()=>setTab(tb.id)}
-            style={{flex:1,padding:"14px",background:"transparent",border:"none",borderBottom:tab===tb.id?`2px solid ${T.ac}`:"2px solid transparent",color:tab===tb.id?T.t:T.tm,fontSize:13,fontWeight:700,cursor:"pointer",transition:"all .2s"}}>
-            {tb.l}{tb.id!=="youtube"&&<span style={{fontFamily:T.m,fontSize:11,background:tab===tb.id?T.acd:T.c,padding:"2px 7px",borderRadius:10,marginLeft:4}}>{tb.n}</span>}
+            style={{flex:"1 0 auto",padding:"12px 8px",background:"transparent",border:"none",borderBottom:tab===tb.id?`2px solid ${tb.id==="cross"?T.r:T.ac}`:"2px solid transparent",color:tab===tb.id?T.t:T.tm,fontSize:12,fontWeight:700,cursor:"pointer",transition:"all .2s",position:"relative",whiteSpace:"nowrap"}}>
+            {tb.l}
+            {tb.n!==null&&<span style={{fontFamily:T.m,fontSize:10,background:tab===tb.id?T.acd:T.c,padding:"1px 6px",borderRadius:10,marginLeft:3}}>{tb.n}</span>}
+            {tb.hot&&<span style={{position:"absolute",top:6,right:4,width:7,height:7,borderRadius:"50%",background:T.r,animation:"pulse 1s infinite"}}/>}
           </button>
         ))}
       </div>
@@ -905,6 +948,177 @@ export default function TrendRadarV5() {
                   📋 추천 영상 파이프라인에 추가
                 </button>
               )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ══ CROSS ANALYSIS TAB ══ */}
+      {tab==="cross"&&(
+        <div style={{padding:16,animation:"fadeUp .3s ease"}}>
+
+          {/* 준비 상태 표시 */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:16}}>
+            <div style={{background:analysis?T.gd:T.c,border:`1px solid ${analysis?T.gb:T.b}`,borderRadius:10,padding:12,display:"flex",alignItems:"center",gap:8}}>
+              <span style={{fontSize:18}}>{analysis?"✅":"⏳"}</span>
+              <div>
+                <div style={{fontSize:11,fontWeight:700,color:analysis?T.g:T.ts}}>트렌드 AI 분석</div>
+                <div style={{fontSize:10,color:T.tm,marginTop:2}}>{analysis?`"${sel?.title?.slice(0,20)}..."`: "트렌드 탭에서 분석 필요"}</div>
+              </div>
+            </div>
+            <div style={{background:ytResult?T.gd:T.c,border:`1px solid ${ytResult?T.gb:T.b}`,borderRadius:10,padding:12,display:"flex",alignItems:"center",gap:8}}>
+              <span style={{fontSize:18}}>{ytResult?"✅":"⏳"}</span>
+              <div>
+                <div style={{fontSize:11,fontWeight:700,color:ytResult?T.g:T.ts}}>유튜브 벤치마킹</div>
+                <div style={{fontSize:10,color:T.tm,marginTop:2}}>{ytResult?`"${ytKeyword}"`: "유튜브 탭에서 분석 필요"}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* 준비 안 됐을 때 가이드 */}
+          {(!analysis||!ytResult)&&(
+            <div style={{background:T.c,borderRadius:12,padding:20,marginBottom:16,textAlign:"center"}}>
+              <div style={{fontSize:32,marginBottom:10}}>⚡</div>
+              <div style={{fontSize:14,fontWeight:800,marginBottom:8}}>교차 분석 준비 중</div>
+              <div style={{fontSize:12,color:T.ts,lineHeight:1.8,marginBottom:16}}>
+                두 가지 분석이 모두 완료되어야 교차 분석이 가능해요.
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                {!analysis&&(
+                  <button onClick={()=>setTab("trends")} style={{padding:"10px",borderRadius:8,background:T.acd,border:`1px solid ${T.acb}`,color:T.ac,fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                    1️⃣ 트렌드 탭 → 트렌드 클릭 → AI 분석
+                  </button>
+                )}
+                {!ytResult&&(
+                  <button onClick={()=>setTab("youtube")} style={{padding:"10px",borderRadius:8,background:T.cyd,border:`1px solid ${T.cyb}`,color:T.cy,fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                    2️⃣ 유튜브 탭 → 영상 정보 입력 → 벤치마킹 분석
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* 교차 분석 실행 버튼 */}
+          {analysis&&ytResult&&!crossResult&&(
+            <div style={{background:`linear-gradient(135deg,${T.rd},${T.acd})`,borderRadius:12,padding:16,marginBottom:16,textAlign:"center"}}>
+              <div style={{fontSize:13,fontWeight:700,color:T.t,marginBottom:4}}>🎯 두 분석 완료! 교차 분석 준비됨</div>
+              <div style={{fontSize:11,color:T.ts,marginBottom:14,lineHeight:1.6}}>
+                트렌드 신호 × 유튜브 패턴을 교차 비교하여<br/>
+                블루오션 각도와 최종 영상 전략을 도출합니다.
+              </div>
+              <button onClick={runCrossAnalysis} disabled={crossLoading}
+                style={{width:"100%",padding:"14px",borderRadius:10,background:crossLoading?T.c:`linear-gradient(135deg,${T.r},${T.ac})`,border:"none",color:crossLoading?T.ts:"#fff",fontSize:15,fontWeight:900,cursor:crossLoading?"not-allowed":"pointer",letterSpacing:"-.01em"}}>
+                {crossLoading?"⚡ 교차 분석중...":"⚡ 트렌드 × 유튜브 교차 분석 시작!"}
+              </button>
+            </div>
+          )}
+
+          {/* 로딩 */}
+          {crossLoading&&(
+            <div style={{textAlign:"center",padding:40}}>
+              <Spin s={32} c={T.r}/>
+              <div style={{marginTop:14,fontSize:14,fontWeight:700,color:T.t,animation:"pulse 1.5s infinite"}}>트렌드 × 유튜브 교차 분석중...</div>
+              <div style={{marginTop:6,fontSize:11,color:T.ts}}>블루오션 각도를 찾고 있어요</div>
+            </div>
+          )}
+
+          {/* 에러 */}
+          {crossError&&<div style={{padding:12,background:T.rd,borderRadius:9,fontSize:12,color:T.r,marginBottom:12}}>⚠️ {crossError}</div>}
+
+          {/* 교차 분석 결과 */}
+          {crossResult&&!crossLoading&&(
+            <div style={{animation:"fadeUp .3s ease"}}>
+
+              {/* 종합 점수 */}
+              <div style={{background:`linear-gradient(135deg,${T.s2},${T.c})`,border:`2px solid ${crossResult.score>=8?T.r:crossResult.score>=6?T.am:T.g}`,borderRadius:14,padding:18,marginBottom:14,textAlign:"center"}}>
+                <div style={{fontSize:10,color:T.ts,fontFamily:T.m,fontWeight:600,marginBottom:6}}>종합 콘텐츠 기회 점수</div>
+                <div style={{fontSize:52,fontWeight:900,fontFamily:T.m,color:crossResult.score>=8?T.r:crossResult.score>=6?T.am:T.g,lineHeight:1}}>{crossResult.score}</div>
+                <div style={{fontSize:11,color:T.ts,fontFamily:T.m,marginTop:2}}>/ 10</div>
+                {crossResult.verdict&&<div style={{fontSize:15,fontWeight:800,color:T.t,marginTop:10,padding:"6px 16px",background:crossResult.score>=8?T.rd:T.amd,borderRadius:20,display:"inline-block"}}>{crossResult.verdict}</div>}
+              </div>
+
+              {/* 공통 키워드 */}
+              {crossResult.common_keywords&&(
+                <div style={{background:T.c,borderRadius:10,padding:14,marginBottom:10}}>
+                  <div style={{fontSize:11,color:T.ts,fontFamily:T.m,fontWeight:600,marginBottom:8}}>🔗 트렌드 × 유튜브 공통 키워드</div>
+                  <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                    {crossResult.common_keywords.map((k,i)=>(
+                      <span key={i} style={{fontSize:12,fontWeight:700,padding:"4px 12px",borderRadius:16,background:`linear-gradient(135deg,${T.acd},${T.cyd})`,border:`1px solid ${T.acb}`,color:T.t}}>{k}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 블루오션 각도 — 핵심! */}
+              {crossResult.blue_ocean&&(
+                <div style={{background:`${T.g}0a`,border:`2px solid ${T.gb}`,borderRadius:12,padding:14,marginBottom:10}}>
+                  <div style={{fontSize:11,color:T.g,fontFamily:T.m,fontWeight:800,marginBottom:6}}>🌊 블루오션 각도 발견!</div>
+                  <div style={{fontSize:13,lineHeight:1.7,fontWeight:600}}>{crossResult.blue_ocean}</div>
+                </div>
+              )}
+
+              {/* 최종 영상 제목 */}
+              {crossResult.final_title&&(
+                <div style={{background:`${T.r}0a`,border:`1px solid ${T.rb}`,borderRadius:12,padding:14,marginBottom:10}}>
+                  <div style={{fontSize:10,color:T.r,fontFamily:T.m,fontWeight:700,marginBottom:6}}>🎬 최종 확정 영상 제목</div>
+                  <div style={{fontSize:16,fontWeight:900,color:T.t,marginBottom:8}}>"{crossResult.final_title}"</div>
+                  <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+                    {crossResult.final_format&&<span style={{fontSize:11,padding:"3px 10px",borderRadius:5,background:T.acd,color:T.ac,fontWeight:700}}>{crossResult.final_format}</span>}
+                    {crossResult.upload_timing&&<span style={{fontSize:11,padding:"3px 10px",borderRadius:5,background:T.amd,color:T.am,fontWeight:700}}>⏰ {crossResult.upload_timing}</span>}
+                    {crossResult.estimated_views&&<span style={{fontSize:11,padding:"3px 10px",borderRadius:5,background:T.gd,color:T.g,fontWeight:700}}>👁️ {crossResult.estimated_views}</span>}
+                  </div>
+                </div>
+              )}
+
+              {/* 이길 이유 + 리스크 */}
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
+                {crossResult.why_win&&(
+                  <div style={{background:T.c,borderRadius:10,padding:12}}>
+                    <div style={{fontSize:10,color:T.g,fontFamily:T.m,fontWeight:700,marginBottom:5}}>✅ 잘 될 이유</div>
+                    <div style={{fontSize:11,lineHeight:1.6,color:T.t}}>{crossResult.why_win}</div>
+                  </div>
+                )}
+                {crossResult.risk&&(
+                  <div style={{background:T.c,borderRadius:10,padding:12}}>
+                    <div style={{fontSize:10,color:T.am,fontFamily:T.m,fontWeight:700,marginBottom:5}}>⚠️ 주의할 점</div>
+                    <div style={{fontSize:11,lineHeight:1.6,color:T.t}}>{crossResult.risk}</div>
+                  </div>
+                )}
+              </div>
+
+              {/* 썸네일 컨셉 + 후킹 */}
+              {(crossResult.thumbnail_concept||crossResult.hook_idea)&&(
+                <div style={{background:T.c,borderRadius:10,padding:14,marginBottom:14}}>
+                  {crossResult.thumbnail_concept&&(
+                    <div style={{marginBottom:crossResult.hook_idea?10:0}}>
+                      <div style={{fontSize:10,color:T.ts,fontFamily:T.m,fontWeight:600,marginBottom:4}}>🖼️ 썸네일 컨셉</div>
+                      <div style={{fontSize:12,lineHeight:1.6}}>{crossResult.thumbnail_concept}</div>
+                    </div>
+                  )}
+                  {crossResult.hook_idea&&(
+                    <div style={{borderTop:crossResult.thumbnail_concept?`1px solid ${T.b}`:"none",paddingTop:crossResult.thumbnail_concept?10:0}}>
+                      <div style={{fontSize:10,color:T.ts,fontFamily:T.m,fontWeight:600,marginBottom:4}}>🎯 오프닝 후킹 아이디어</div>
+                      <div style={{fontSize:12,lineHeight:1.6,fontStyle:"italic",color:T.cy}}>"{crossResult.hook_idea}"</div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 파이프라인 추가 */}
+              {crossResult.final_title&&(
+                <button onClick={()=>{
+                  setPipe(p=>[...p,{id:Date.now(),trend:`[교차분석] ${sel?.title?.slice(0,30)||ytKeyword}`,video:crossResult.final_title,format:crossResult.final_format||"롱폼",stage:"discovered",added:new Date().toLocaleString("ko-KR"),score:crossResult.score*10}]);
+                  setTab("pipeline");
+                }} style={{width:"100%",padding:"13px",borderRadius:10,background:`linear-gradient(135deg,${T.acd},${T.gd})`,border:`1px solid ${T.acb}`,color:T.t,fontSize:14,fontWeight:800,cursor:"pointer"}}>
+                  📋 최종 영상 파이프라인에 추가 →
+                </button>
+              )}
+
+              {/* 다시 분석 */}
+              <button onClick={()=>{setCrossResult(null);setCrossError("");}}
+                style={{width:"100%",padding:"9px",borderRadius:8,background:"transparent",border:`1px solid ${T.ba}`,color:T.ts,fontSize:11,fontWeight:600,cursor:"pointer",marginTop:8}}>
+                ↻ 다시 분석
+              </button>
             </div>
           )}
         </div>
