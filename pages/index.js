@@ -280,7 +280,7 @@ export default function TrendRadarV5() {
   const [pipe, setPipe] = useState([]);
   const [auto, setAuto] = useState(true);
   const [fStatus, setFStatus] = useState({});
-  const [apiKey, setApiKey] = useState(()=>typeof window!=="undefined"?localStorage.getItem("tr_openrouter_key")||"":"");
+  const [apiKey, setApiKey] = useState(()=>typeof window!=="undefined"?localStorage.getItem("tr_claude_key")||"":"");
   const [showApiModal, setShowApiModal] = useState(false);
   const [workflowStep, setWorkflowStep] = useState(0);
   const [apiError, setApiError] = useState("");
@@ -384,7 +384,7 @@ export default function TrendRadarV5() {
   };
   const moveStage=(id,st2)=>setPipe(p=>p.map(i=>i.id===id?{...i,stage:st2}:i));
   const rmPipe=(id)=>setPipe(p=>p.filter(i=>i.id!==id));
-  const saveApiKey=(key)=>{localStorage.setItem("tr_openrouter_key",key);setApiKey(key);setShowApiModal(false);};
+  const saveApiKey=(key)=>{localStorage.setItem("tr_claude_key",key);setApiKey(key);setShowApiModal(false);};
 
   return(<>
     <Head>
@@ -426,7 +426,7 @@ export default function TrendRadarV5() {
         </div>
         <div style={{display:"flex",gap:8,alignItems:"center"}}>
           <button onClick={()=>setShowApiModal(true)} style={{padding:"6px 12px",borderRadius:7,fontSize:11,fontFamily:T.m,fontWeight:700,cursor:"pointer",border:`1px solid ${apiKey?T.gb:T.amb}`,background:apiKey?T.gd:T.amd,color:apiKey?T.g:T.am}}>
-            {apiKey?"🟢 OpenRouter 연결됨":"🟢 API 설정"}
+            {apiKey?"🟢 Claude 연결됨":"🟣 API 설정"}
           </button>
           <button onClick={()=>setAuto(!auto)} style={{padding:"6px 12px",borderRadius:7,fontSize:11,fontFamily:T.m,fontWeight:700,cursor:"pointer",border:`1px solid ${auto?T.gb:T.ba}`,background:auto?T.gd:"transparent",color:auto?T.g:T.ts}}>
             {auto?"⏱ 자동갱신":"⏸ 수동"}
