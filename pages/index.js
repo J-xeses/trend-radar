@@ -628,7 +628,39 @@ export default function TrendRadarV5() {
                   </div>
                 </div>
               ))}
-              {analysis.tags&&<div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:10}}>{analysis.tags.map((tg,i)=><Pill key={i} color={T.ac} bg={T.acd}>{tg}</Pill>)}</div>}
+              {analysis.tags&&(
+                <div style={{marginTop:12}}>
+                  <div style={{fontSize:10,color:T.ts,fontFamily:T.m,fontWeight:600,marginBottom:6}}>🏷️ 검색 태그</div>
+                  <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{analysis.tags.map((tg,i)=><Pill key={i} color={T.ac} bg={T.acd}>{tg}</Pill>)}</div>
+                </div>
+              )}
+              {/* 유튜브 벤치마킹 연결 버튼 */}
+              <div style={{marginTop:14,background:`${T.cy}08`,border:`1px solid ${T.cyb}`,borderRadius:10,padding:12}}>
+                <div style={{fontSize:11,color:T.cy,fontFamily:T.m,fontWeight:700,marginBottom:6}}>📺 다음 단계 — 유튜브 벤치마킹</div>
+                <div style={{fontSize:11,color:T.ts,marginBottom:10,lineHeight:1.6}}>
+                  아래 키워드로 유튜브를 검색하고, 상위 영상 정보를 벤치마킹 탭에 입력하면 경쟁 분석이 완성돼요.
+                </div>
+                <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
+                  {/* 트렌드 제목에서 핵심 키워드 추출 */}
+                  {sel&&[
+                    sel.title.split(/[\s:–\-|]+/).slice(0,3).join(" "),
+                    ...(analysis.tags||[]).slice(0,2).map(t=>t.replace("#",""))
+                  ].filter((k,i,a)=>k&&a.indexOf(k)===i).slice(0,3).map((kw,i)=>(
+                    <button key={i} onClick={()=>{
+                      setYtKeyword(kw);
+                      setTab("youtube");
+                    }} style={{padding:"5px 12px",borderRadius:16,fontSize:11,fontWeight:700,cursor:"pointer",border:`1px solid ${T.cyb}`,background:T.cyd,color:T.cy}}>
+                      🔍 "{kw}"
+                    </button>
+                  ))}
+                </div>
+                <button onClick={()=>{
+                  if(sel) setYtKeyword(sel.title.split(/[\s:–\-|]+/).slice(0,3).join(" "));
+                  setTab("youtube");
+                }} style={{width:"100%",padding:"9px",borderRadius:8,background:T.cyd,border:`1px solid ${T.cyb}`,color:T.cy,fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                  📺 유튜브 벤치마킹 탭으로 이동 →
+                </button>
+              </div>
             </div>}
           </div>
         )}
@@ -676,13 +708,36 @@ export default function TrendRadarV5() {
 
           {/* 키워드 입력 */}
           <div style={{marginBottom:14}}>
-            <div style={{fontSize:11,color:T.ts,fontFamily:T.m,fontWeight:600,marginBottom:6}}>분석 키워드 (트렌드 레이더에서 발견한 주제)</div>
-            <input
-              value={ytKeyword}
-              onChange={e=>setYtKeyword(e.target.value)}
-              placeholder="예: AI 직장인 자동화, ChatGPT 업무활용..."
-              style={{width:"100%",background:T.c,border:`1px solid ${ytKeyword?T.acb:T.b}`,borderRadius:9,padding:"10px 14px",color:T.t,fontSize:13,boxSizing:"border-box"}}
-            />
+            <div style={{fontSize:11,color:T.ts,fontFamily:T.m,fontWeight:600,marginBottom:6}}>
+              분석 키워드
+              <span style={{color:T.tm,fontWeight:400,marginLeft:6}}>(트렌드 AI 분석 후 → 버튼 클릭하면 자동 입력됩니다)</span>
+            </div>
+            <div style={{position:"relative"}}>
+              <input
+                value={ytKeyword}
+                onChange={e=>setYtKeyword(e.target.value)}
+                placeholder="예: AI 직장인 자동화, ChatGPT 업무활용..."
+                style={{width:"100%",background:T.c,border:`1px solid ${ytKeyword?T.cyb:T.b}`,borderRadius:9,padding:"10px 14px",color:T.t,fontSize:13,boxSizing:"border-box"}}
+              />
+              {ytKeyword&&(
+                <div style={{marginTop:6,display:"flex",alignItems:"center",gap:6}}>
+                  <span style={{fontSize:10,color:T.ts,fontFamily:T.m}}>유튜브 검색어:</span>
+                  <a
+                    href={`https://www.youtube.com/results?search_query=${encodeURIComponent(ytKeyword)}&sp=CAM%253D`}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{fontSize:11,color:T.cy,fontWeight:700,background:T.cyd,padding:"3px 10px",borderRadius:12,border:`1px solid ${T.cyb}`,textDecoration:"none"}}>
+                    🔴 유튜브에서 "{ytKeyword}" 검색 →
+                  </a>
+                  <span style={{fontSize:10,color:T.tm}}>(조회수순 정렬)</span>
+                </div>
+              )}
+              {!ytKeyword&&(
+                <div style={{marginTop:6,fontSize:11,color:T.tm,fontFamily:T.m}}>
+                  💡 트렌드 탭 → AI 분석 → "유튜브 벤치마킹 탭으로 이동" 버튼을 누르면 키워드가 자동 입력돼요
+                </div>
+              )}
+            </div>
           </div>
 
           {/* 영상 입력 안내 */}
