@@ -298,6 +298,16 @@ export default function TrendRadarV5() {
   const [crossLoading, setCrossLoading] = useState(false);
   const [crossResult, setCrossResult] = useState(null);
   const [crossError, setCrossError] = useState("");
+  // 채널 분석
+  const [chTab, setChTab] = useState(0);
+  const [channels, setChannels] = useState([
+    {id:1,name:"",url:"",subscribers:"",topics:"",recentVideos:[{title:"",views:"",date:""},{title:"",views:"",date:""},{title:"",views:"",date:""}]},
+    {id:2,name:"",url:"",subscribers:"",topics:"",recentVideos:[{title:"",views:"",date:""},{title:"",views:"",date:""},{title:"",views:"",date:""}]},
+    {id:3,name:"",url:"",subscribers:"",topics:"",recentVideos:[{title:"",views:"",date:""},{title:"",views:"",date:""},{title:"",views:"",date:""}]},
+  ]);
+  const [chLoading, setChLoading] = useState(false);
+  const [chResults, setChResults] = useState({});
+  const [chError, setChError] = useState("");
   const timer = useRef(null);
   const analysisRef = useRef(null);
 
