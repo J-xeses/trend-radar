@@ -770,94 +770,82 @@ export default function TrendRadarV5() {
       {tab==="youtube"&&(
         <div style={{padding:16,animation:"fadeUp .3s ease"}}>
 
-          {/* 안내 배너 */}
-          <div style={{background:`${T.cy}0c`,border:`1px solid ${T.cyb}`,borderRadius:12,padding:14,marginBottom:16,display:"flex",gap:10,alignItems:"flex-start"}}>
-            <span style={{fontSize:20,flexShrink:0}}>📺</span>
-            <div>
-              <div style={{fontSize:13,fontWeight:700,color:T.cy,marginBottom:3}}>유튜브 벤치마킹 분석</div>
-              <div style={{fontSize:12,color:T.ts,lineHeight:1.7}}>
-                트렌드 레이더에서 발견한 주제를 유튜브에서 검색 → 상위 영상 정보 입력 → AI가 제목 패턴, 후킹 방식, 차별화 각도를 분석해드려요.
-              </div>
-            </div>
-          </div>
-
-          {/* 키워드 입력 */}
-          <div style={{marginBottom:14}}>
-            <div style={{fontSize:11,color:T.ts,fontFamily:T.m,fontWeight:600,marginBottom:6}}>
-              분석 키워드
-              <span style={{color:T.tm,fontWeight:400,marginLeft:6}}>(트렌드 AI 분석 후 → 버튼 클릭하면 자동 입력됩니다)</span>
-            </div>
-            <div style={{position:"relative"}}>
+          {/* 키워드 + 유튜브 바로가기 */}
+          <div style={{marginBottom:12}}>
+            <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:6}}>
               <input
                 value={ytKeyword}
                 onChange={e=>setYtKeyword(e.target.value)}
-                placeholder="예: AI 직장인 자동화, ChatGPT 업무활용..."
-                style={{width:"100%",background:T.c,border:`1px solid ${ytKeyword?T.cyb:T.b}`,borderRadius:9,padding:"10px 14px",color:T.t,fontSize:13,boxSizing:"border-box"}}
+                placeholder="분석 키워드 입력..."
+                style={{flex:1,background:T.c,border:`1px solid ${ytKeyword?T.cyb:T.b}`,borderRadius:9,padding:"10px 14px",color:T.t,fontSize:13,boxSizing:"border-box"}}
               />
               {ytKeyword&&(
-                <div style={{marginTop:6,display:"flex",alignItems:"center",gap:6}}>
-                  <span style={{fontSize:10,color:T.ts,fontFamily:T.m}}>유튜브 검색어:</span>
-                  <a
-                    href={`https://www.youtube.com/results?search_query=${encodeURIComponent(ytKeyword)}&sp=EgIIBQ%253D%253D`}
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{fontSize:11,color:T.cy,fontWeight:700,background:T.cyd,padding:"3px 10px",borderRadius:12,border:`1px solid ${T.cyb}`,textDecoration:"none"}}>
-                    🔴 유튜브에서 "{ytKeyword}" 검색 →
-                  </a>
-                  <span style={{fontSize:10,color:T.tm}}>(최근 1개월 · 조회수순)</span>
-                </div>
+                <a href={`https://www.youtube.com/results?search_query=${encodeURIComponent(ytKeyword)}&sp=EgIIBQ%253D%253D`}
+                  target="_blank" rel="noreferrer"
+                  style={{flexShrink:0,padding:"10px 14px",borderRadius:9,background:T.cyd,border:`1px solid ${T.cyb}`,color:T.cy,fontSize:12,fontWeight:700,textDecoration:"none",whiteSpace:"nowrap"}}>
+                  🔴 유튜브 검색 →
+                </a>
               )}
-              {!ytKeyword&&(
-                <div style={{marginTop:6,fontSize:11,color:T.tm,fontFamily:T.m}}>
-                  💡 트렌드 탭 → AI 분석 → "유튜브 벤치마킹 탭으로 이동" 버튼을 누르면 키워드가 자동 입력돼요
-                </div>
-              )}
+            </div>
+            {!ytKeyword&&<div style={{fontSize:11,color:T.tm,fontFamily:T.m}}>💡 트렌드 탭 AI 분석 후 키워드 버튼 클릭 → 자동 입력</div>}
+            {ytKeyword&&<div style={{fontSize:10,color:T.tm}}>(최근 1개월 · 조회수순으로 열려요)</div>}
+          </div>
+
+          {/* 빠른 입력 안내 */}
+          <div style={{background:`${T.am}08`,border:`1px solid ${T.amb}`,borderRadius:10,padding:12,marginBottom:12}}>
+            <div style={{fontSize:11,fontWeight:700,color:T.am,marginBottom:6}}>⚡ 빠른 입력 방법</div>
+            <div style={{fontSize:11,color:T.ts,lineHeight:1.9}}>
+              유튜브에서 영상 제목 복사 → 아래 각 칸에 붙여넣기<br/>
+              <span style={{color:T.t}}>제목만 입력해도 분석 가능</span> · 채널/조회수는 선택사항이에요
             </div>
           </div>
 
-          {/* 영상 입력 안내 */}
-          <div style={{fontSize:11,color:T.ts,fontFamily:T.m,fontWeight:600,marginBottom:8}}>
-            유튜브에서 키워드 검색 후 상위 영상 정보 입력 (최대 5개)
-          </div>
-          <div style={{background:`${T.am}0c`,border:`1px solid ${T.amb}`,borderRadius:9,padding:10,marginBottom:12,fontSize:11,color:T.am,lineHeight:1.8}}>
-            💡 유튜브 검색 → 조회수 높은 영상 클릭 → 제목/채널명/조회수/좋아요/업로드날짜 입력
-          </div>
-
-          {/* 영상 입력 폼 */}
+          {/* 영상 입력 폼 — 간소화 버전 */}
           {ytVideos.map((v,i)=>(
-            <div key={v.id} style={{background:T.c,border:`1px solid ${T.b}`,borderRadius:10,padding:12,marginBottom:8}}>
-              <div style={{fontSize:11,fontWeight:700,color:T.ac,fontFamily:T.m,marginBottom:8}}>영상 {i+1}</div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr",gap:6}}>
+            <div key={v.id} style={{background:T.c,border:`1px solid ${v.title?T.acb:T.b}`,borderRadius:10,padding:10,marginBottom:6,transition:"border .2s"}}>
+              <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:v.title?6:0}}>
+                <span style={{fontSize:10,fontWeight:700,color:v.title?T.ac:T.tm,fontFamily:T.m,flexShrink:0,width:16}}>{i+1}</span>
                 <input
                   value={v.title}
                   onChange={e=>setYtVideos(prev=>prev.map((p,j)=>j===i?{...p,title:e.target.value}:p))}
-                  placeholder="영상 제목"
-                  style={{background:T.s2,border:`1px solid ${T.b}`,borderRadius:7,padding:"8px 10px",color:T.t,fontSize:12,width:"100%",boxSizing:"border-box"}}
+                  placeholder={`영상 제목 ${i+1} (제목만 입력해도 OK)`}
+                  style={{flex:1,background:T.s2,border:`1px solid ${T.b}`,borderRadius:7,padding:"8px 10px",color:T.t,fontSize:12,boxSizing:"border-box"}}
                 />
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
-                  <input
-                    value={v.channel}
+                {v.title&&<button onClick={()=>setYtVideos(prev=>prev.map((p,j)=>j===i?{...p,title:"",channel:"",views:"",likes:"",uploadDate:""}:p))}
+                  style={{flexShrink:0,width:24,height:24,borderRadius:5,background:"transparent",border:"none",color:T.tm,cursor:"pointer",fontSize:12}}>✕</button>}
+              </div>
+              {v.title&&(
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:5,paddingLeft:24}}>
+                  <input value={v.channel}
                     onChange={e=>setYtVideos(prev=>prev.map((p,j)=>j===i?{...p,channel:e.target.value}:p))}
-                    placeholder="채널명"
-                    style={{background:T.s2,border:`1px solid ${T.b}`,borderRadius:7,padding:"8px 10px",color:T.t,fontSize:12,boxSizing:"border-box"}}
-                  />
-                  <input
-                    value={v.views}
+                    placeholder="채널명 (선택)"
+                    style={{background:T.s2,border:`1px solid ${T.b}`,borderRadius:6,padding:"6px 8px",color:T.t,fontSize:11,boxSizing:"border-box"}}/>
+                  <input value={v.views}
                     onChange={e=>setYtVideos(prev=>prev.map((p,j)=>j===i?{...p,views:e.target.value}:p))}
-                    placeholder="조회수 (예: 120만)"
-                    style={{background:T.s2,border:`1px solid ${T.b}`,borderRadius:7,padding:"8px 10px",color:T.t,fontSize:12,boxSizing:"border-box"}}
-                  />
-                </div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
-                  <input
-                    value={v.likes}
-                    onChange={e=>setYtVideos(prev=>prev.map((p,j)=>j===i?{...p,likes:e.target.value}:p))}
-                    placeholder="좋아요 (예: 3.2만)"
-                    style={{background:T.s2,border:`1px solid ${T.b}`,borderRadius:7,padding:"8px 10px",color:T.t,fontSize:12,boxSizing:"border-box"}}
-                  />
-                  <input
-                    value={v.uploadDate}
+                    placeholder="조회수 (선택)"
+                    style={{background:T.s2,border:`1px solid ${T.b}`,borderRadius:6,padding:"6px 8px",color:T.t,fontSize:11,boxSizing:"border-box"}}/>
+                  <input value={v.uploadDate}
                     onChange={e=>setYtVideos(prev=>prev.map((p,j)=>j===i?{...p,uploadDate:e.target.value}:p))}
+                    placeholder="날짜 (선택)"
+                    style={{background:T.s2,border:`1px solid ${T.b}`,borderRadius:6,padding:"6px 8px",color:T.t,fontSize:11,boxSizing:"border-box"}}/>
+                </div>
+              )}
+            </div>
+          ))}
+
+          {/* 더미 - 기존 코드와 연결 위해 유지 */}
+          {false&&ytVideos.map((v,i)=>(
+            <div key={v.id}>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+                <input
+                  value={v.likes}
+                  onChange={e=>setYtVideos(prev=>prev.map((p,j)=>j===i?{...p,likes:e.target.value}:p))}
+                  placeholder="좋아요 (예: 3.2만)"
+                  style={{}}
+                />
+                <input
+                  value={v.uploadDate}
+                  onChange={e=>setYtVideos(prev=>prev.map((p,j)=>j===i?{...p,uploadDate:e.target.value}:p))}
                     placeholder="업로드 날짜 (예: 2주 전)"
                     style={{background:T.s2,border:`1px solid ${T.b}`,borderRadius:7,padding:"8px 10px",color:T.t,fontSize:12,boxSizing:"border-box"}}
                   />
@@ -867,6 +855,7 @@ export default function TrendRadarV5() {
           ))}
 
           {/* 영상 추가 버튼 */}
+
           {ytVideos.length < 5 && (
             <button
               onClick={()=>setYtVideos(prev=>[...prev,{id:Date.now(),title:"",channel:"",views:"",likes:"",uploadDate:""}])}
