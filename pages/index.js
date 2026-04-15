@@ -423,6 +423,27 @@ export default function TrendRadarV5() {
     setCrossLoading(false);
   },[apiKey,analysis,ytResult,ytKeyword,sel]);
 
+  /* ── 채널 분석 ── */
+  const analyzeChannel = useCallback(async(idx)=>{
+    if(!apiKey){setShowApiModal(true);return;}
+    const ch = channels[idx];
+    if(!ch.name.trim()){setChError("채널명을 입력해주세요.");return;}
+    setChLoading(true);setChError("");
+    try{
+      const res = await fetch("/api/analyze",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({type:"channel_analysis",channel:ch,apiKey}),
+      });
+      const data = await res.json();
+      if(!res.ok) throw new Error(data.error||"채널 분석 실패");
+      setChResults(prev=>({...prev,[idx]:data.result||{}}));
+    }catch(e){
+      setChError(e.message||"채널 분석 실패");
+    }
+    setChLoading(false);
+  },[apiKey,channels]);
+
   const benchmarkYoutube = useCallback(async()=>{
     if(!apiKey){setShowApiModal(true);return;}
     const validVideos = ytVideos.filter(v=>v.title.trim());
@@ -563,6 +584,7 @@ export default function TrendRadarV5() {
           {id:"trends",   l:"🔍 트렌드",      n:filtered.length},
           {id:"youtube",  l:"📺 유튜브",       n:null},
           {id:"cross",    l:"⚡ 교차분석",     n:null, hot:!!(analysis&&ytResult)},
+          {id:"channel",  l:"📊 채널분석",     n:null},
           {id:"pipeline", l:"📋 파이프라인",   n:pipe.length},
         ].map(tb=>(
           <button key={tb.id} onClick={()=>setTab(tb.id)}
@@ -1121,6 +1143,192 @@ export default function TrendRadarV5() {
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ══ CHANNEL ANALYSIS TAB ══ */}
+      {tab==="channel"&&(
+        <div style={{padding:16,animation:"fadeUp .3s ease"}}>
+
+          {/* 안내 배너 */}
+          <div style={{background:`${T.ro}0a`,border:`1px solid ${T.rod}`,borderRadius:12,padding:14,marginBottom:16,display:"flex",gap:10,alignItems:"flex-start"}}>
+            <span style={{fontSize:20,flexShrink:0}}>📊</span>
+            <div>
+              <div style={{fontSize:13,fontWeight:700,color:T.ro,marginBottom:3}}>채널 분석 모듈</div>
+              <div style={{fontSize:12,color:T.ts,lineHeight:1.7}}>
+                경쟁/벤치마킹 채널을 등록하고 AI로 강점·빈틈·차별화 전략을 분석해요.<br/>
+                채널 방문 → 최근 영상 3개 정보 입력 → 분석 시작!
+              </div>
+            </div>
+          </div>
+
+          {/* 채널 선택 탭 */}
+          <div style={{display:"flex",gap:6,marginBottom:14}}>
+            {channels.map((ch,i)=>(
+              <button key={i} onClick={()=>setChTab(i)}
+                style={{flex:1,padding:"8px 4px",borderRadius:8,border:`1px solid ${chTab===i?T.ro+"60":T.b}`,background:chTab===i?`${T.ro}10`:T.c,color:chTab===i?T.ro:T.ts,fontSize:12,fontWeight:700,cursor:"pointer",transition:"all .2s"}}>
+                {ch.name||`채널 ${i+1}`}
+                {chResults[i]&&<span style={{marginLeft:4,fontSize:10,color:T.g}}>✓</span>}
+              </button>
+            ))}
+            {channels.length<5&&(
+              <button onClick={()=>setChannels(prev=>[...prev,{id:Date.now(),name:"",url:"",subscribers:"",topics:"",recentVideos:[{title:"",views:"",date:""},{title:"",views:"",date:""},{title:"",views:"",date:""}]}])}
+                style={{padding:"8px 12px",borderRadius:8,border:`1px dashed ${T.ba}`,background:"transparent",color:T.tm,fontSize:12,cursor:"pointer"}}>
+                +
+              </button>
+            )}
+          </div>
+
+          {/* 채널 입력 폼 */}
+          {channels.map((ch,i)=>i===chTab&&(
+            <div key={i}>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+                <div>
+                  <div style={{fontSize:10,color:T.ts,fontFamily:T.m,fontWeight:600,marginBottom:4}}>채널명 *</div>
+                  <input value={ch.name} onChange={e=>setChannels(prev=>prev.map((c,j)=>j===i?{...c,name:e.target.value}:c))}
+                    placeholder="예: EO Korea"
+                    style={{width:"100%",background:T.c,border:`1px solid ${ch.name?T.ro+"50":T.b}`,borderRadius:8,padding:"9px 12px",color:T.t,fontSize:13,boxSizing:"border-box"}}/>
+                </div>
+                <div>
+                  <div style={{fontSize:10,color:T.ts,fontFamily:T.m,fontWeight:600,marginBottom:4}}>구독자 수</div>
+                  <input value={ch.subscribers} onChange={e=>setChannels(prev=>prev.map((c,j)=>j===i?{...c,subscribers:e.target.value}:c))}
+                    placeholder="예: 52만"
+                    style={{width:"100%",background:T.c,border:`1px solid ${T.b}`,borderRadius:8,padding:"9px 12px",color:T.t,fontSize:13,boxSizing:"border-box"}}/>
+                </div>
+              </div>
+              <div style={{marginBottom:8}}>
+                <div style={{fontSize:10,color:T.ts,fontFamily:T.m,fontWeight:600,marginBottom:4}}>채널 URL (선택)</div>
+                <input value={ch.url} onChange={e=>setChannels(prev=>prev.map((c,j)=>j===i?{...c,url:e.target.value}:c))}
+                  placeholder="https://youtube.com/@채널명"
+                  style={{width:"100%",background:T.c,border:`1px solid ${T.b}`,borderRadius:8,padding:"9px 12px",color:T.t,fontSize:13,boxSizing:"border-box"}}/>
+              </div>
+              <div style={{marginBottom:12}}>
+                <div style={{fontSize:10,color:T.ts,fontFamily:T.m,fontWeight:600,marginBottom:4}}>주요 주제</div>
+                <input value={ch.topics} onChange={e=>setChannels(prev=>prev.map((c,j)=>j===i?{...c,topics:e.target.value}:c))}
+                  placeholder="예: AI툴 리뷰, 직장인 생산성, ChatGPT 활용"
+                  style={{width:"100%",background:T.c,border:`1px solid ${T.b}`,borderRadius:8,padding:"9px 12px",color:T.t,fontSize:13,boxSizing:"border-box"}}/>
+              </div>
+
+              {/* 최근 영상 입력 */}
+              <div style={{fontSize:11,color:T.ts,fontFamily:T.m,fontWeight:700,marginBottom:8,letterSpacing:".04em"}}>
+                최근 인기 영상 (채널 방문 후 입력)
+              </div>
+              {ch.recentVideos.map((v,vi)=>(
+                <div key={vi} style={{background:T.c,border:`1px solid ${T.b}`,borderRadius:9,padding:10,marginBottom:6}}>
+                  <div style={{fontSize:10,color:T.ro,fontFamily:T.m,fontWeight:700,marginBottom:6}}>영상 {vi+1}</div>
+                  <input value={v.title} onChange={e=>setChannels(prev=>prev.map((c,j)=>j===i?{...c,recentVideos:c.recentVideos.map((rv,rj)=>rj===vi?{...rv,title:e.target.value}:rv)}:c))}
+                    placeholder="영상 제목"
+                    style={{width:"100%",background:T.s2,border:`1px solid ${T.b}`,borderRadius:7,padding:"7px 10px",color:T.t,fontSize:12,marginBottom:5,boxSizing:"border-box"}}/>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:5}}>
+                    <input value={v.views} onChange={e=>setChannels(prev=>prev.map((c,j)=>j===i?{...c,recentVideos:c.recentVideos.map((rv,rj)=>rj===vi?{...rv,views:e.target.value}:rv)}:c))}
+                      placeholder="조회수 (예: 24만)"
+                      style={{background:T.s2,border:`1px solid ${T.b}`,borderRadius:7,padding:"7px 10px",color:T.t,fontSize:12,boxSizing:"border-box"}}/>
+                    <input value={v.date} onChange={e=>setChannels(prev=>prev.map((c,j)=>j===i?{...c,recentVideos:c.recentVideos.map((rv,rj)=>rj===vi?{...rv,date:e.target.value}:rv)}:c))}
+                      placeholder="업로드 (예: 3일 전)"
+                      style={{background:T.s2,border:`1px solid ${T.b}`,borderRadius:7,padding:"7px 10px",color:T.t,fontSize:12,boxSizing:"border-box"}}/>
+                  </div>
+                </div>
+              ))}
+
+              {chError&&<div style={{padding:10,background:T.rd,borderRadius:8,fontSize:12,color:T.r,marginBottom:10}}>⚠️ {chError}</div>}
+
+              {/* 분석 버튼 */}
+              <button onClick={()=>analyzeChannel(i)} disabled={chLoading}
+                style={{width:"100%",padding:"13px",borderRadius:10,background:chLoading?T.c:`linear-gradient(135deg,${T.ro},${T.ac})`,border:"none",color:chLoading?T.ts:"#fff",fontSize:14,fontWeight:800,cursor:chLoading?"not-allowed":"pointer",marginBottom:16}}>
+                {chLoading?"📊 분석중...":"📊 채널 AI 분석 시작"}
+              </button>
+
+              {/* 분석 결과 */}
+              {chLoading&&(
+                <div style={{textAlign:"center",padding:32}}>
+                  <Spin s={28} c={T.ro}/>
+                  <div style={{marginTop:12,fontSize:13,color:T.ts,animation:"pulse 1.5s infinite"}}>Claude가 채널을 분석중...</div>
+                </div>
+              )}
+              {chResults[i]&&!chLoading&&(()=>{
+                const r = chResults[i];
+                return (
+                  <div style={{animation:"fadeUp .3s ease"}}>
+                    {/* 헤더 */}
+                    <div style={{background:`${T.ro}0a`,border:`1px solid ${T.ro}30`,borderRadius:12,padding:14,marginBottom:12,display:"flex",gap:12,alignItems:"center"}}>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:13,fontWeight:800,color:T.t}}>{ch.name}</div>
+                        <div style={{fontSize:11,color:T.ro,marginTop:3,fontWeight:600}}>{r.channel_type}</div>
+                      </div>
+                      <div style={{textAlign:"center"}}>
+                        <div style={{fontSize:10,color:T.ts,fontFamily:T.m}}>위협도</div>
+                        <div style={{fontSize:13,fontWeight:800,color:r.threat_level==="높음"?T.r:r.threat_level==="보통"?T.am:T.g}}>{r.threat_level}</div>
+                      </div>
+                      <div style={{textAlign:"center"}}>
+                        <div style={{fontSize:10,color:T.ts,fontFamily:T.m}}>협업</div>
+                        <div style={{fontSize:13,fontWeight:800,color:r.collab_potential==="높음"?T.g:r.collab_potential==="보통"?T.am:T.ts}}>{r.collab_potential}</div>
+                      </div>
+                    </div>
+
+                    {/* 강점 / 약점 */}
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
+                      <div style={{background:T.c,borderRadius:10,padding:12}}>
+                        <div style={{fontSize:10,color:T.g,fontFamily:T.m,fontWeight:700,marginBottom:6}}>💪 강점</div>
+                        {(r.strengths||[]).map((s,si)=><div key={si} style={{fontSize:11,color:T.t,padding:"3px 0",borderBottom:si<r.strengths.length-1?`1px solid ${T.b}`:"none"}}>• {s}</div>)}
+                      </div>
+                      <div style={{background:T.c,borderRadius:10,padding:12}}>
+                        <div style={{fontSize:10,color:T.am,fontFamily:T.m,fontWeight:700,marginBottom:6}}>🕳️ 빈틈</div>
+                        {(r.weaknesses||[]).map((s,si)=><div key={si} style={{fontSize:11,color:T.t,padding:"3px 0",borderBottom:si<r.weaknesses.length-1?`1px solid ${T.b}`:"none"}}>• {s}</div>)}
+                      </div>
+                    </div>
+
+                    {/* 다루지 않는 주제 */}
+                    {r.missing_topics&&(
+                      <div style={{background:`${T.g}0a`,border:`1px solid ${T.gb}`,borderRadius:10,padding:12,marginBottom:10}}>
+                        <div style={{fontSize:10,color:T.g,fontFamily:T.m,fontWeight:700,marginBottom:6}}>🌊 이 채널이 다루지 않는 주제 (블루오션!)</div>
+                        <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+                          {r.missing_topics.map((t,ti)=><span key={ti} style={{fontSize:11,padding:"3px 10px",borderRadius:12,background:T.gd,color:T.g,fontWeight:600}}>{t}</span>)}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 차별화 전략 */}
+                    {r.my_differentiation&&(
+                      <div style={{background:`${T.ac}0a`,border:`1px solid ${T.acb}`,borderRadius:10,padding:12,marginBottom:10}}>
+                        <div style={{fontSize:10,color:T.ac,fontFamily:T.m,fontWeight:700,marginBottom:4}}>🎯 내 채널 차별화 전략</div>
+                        <div style={{fontSize:12,lineHeight:1.7}}>{r.my_differentiation}</div>
+                      </div>
+                    )}
+
+                    {/* 배울 점 / 피할 점 */}
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
+                      {r.learn_from&&<div style={{background:T.c,borderRadius:10,padding:12}}><div style={{fontSize:10,color:T.cy,fontFamily:T.m,fontWeight:700,marginBottom:4}}>📚 배울 점</div><div style={{fontSize:11,lineHeight:1.6}}>{r.learn_from}</div></div>}
+                      {r.avoid&&<div style={{background:T.c,borderRadius:10,padding:12}}><div style={{fontSize:10,color:T.r,fontFamily:T.m,fontWeight:700,marginBottom:4}}>⚠️ 피할 점</div><div style={{fontSize:11,lineHeight:1.6}}>{r.avoid}</div></div>}
+                    </div>
+
+                    {/* 제목 공식 */}
+                    {r.title_formula&&(
+                      <div style={{background:T.c,borderRadius:10,padding:12,marginBottom:10}}>
+                        <div style={{fontSize:10,color:T.ts,fontFamily:T.m,fontWeight:600,marginBottom:4}}>📝 제목 공식</div>
+                        <div style={{fontSize:12,color:T.am,fontWeight:600}}>{r.title_formula}</div>
+                      </div>
+                    )}
+
+                    {/* 종합 평가 */}
+                    {r.overall&&(
+                      <div style={{background:T.s2,border:`1px solid ${T.ba}`,borderRadius:10,padding:12,marginBottom:12}}>
+                        <div style={{fontSize:10,color:T.ts,fontFamily:T.m,fontWeight:600,marginBottom:4}}>📋 종합 평가</div>
+                        <div style={{fontSize:12,lineHeight:1.7,color:T.t}}>{r.overall}</div>
+                      </div>
+                    )}
+
+                    {/* 교차분석 연결 */}
+                    {analysis&&(
+                      <button onClick={()=>setTab("cross")}
+                        style={{width:"100%",padding:"10px",borderRadius:9,background:`${T.r}0a`,border:`1px solid ${T.rb}`,color:T.r,fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                        ⚡ 이 채널 분석 + 트렌드 교차분석으로 이동 →
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+          ))}
         </div>
       )}
 
