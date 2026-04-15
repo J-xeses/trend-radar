@@ -277,7 +277,12 @@ export default function TrendRadarV5() {
   const [analysis, setAnalysis] = useState(null);
   const [sL, setSL] = useState(false);
   const [script, setScript] = useState(null);
-  const [pipe, setPipe] = useState([]);
+  const [pipe, setPipe] = useState(()=>{
+    try{
+      const saved = typeof window!=="undefined"?localStorage.getItem("tr_pipeline"):null;
+      return saved?JSON.parse(saved):[];
+    }catch{return [];}
+  });
   const [auto, setAuto] = useState(true);
   const [fStatus, setFStatus] = useState({});
   const [apiKey, setApiKey] = useState(()=>typeof window!=="undefined"?localStorage.getItem("tr_claude_key")||"":"");
@@ -339,6 +344,9 @@ export default function TrendRadarV5() {
   },[]);
 
   useEffect(()=>{fetchAll();return()=>clearInterval(timer.current);},[]);
+  useEffect(()=>{
+    try{localStorage.setItem("tr_pipeline",JSON.stringify(pipe));}catch{}
+  },[pipe]);
   useEffect(()=>{
     clearInterval(timer.current);
     if(auto) timer.current=setInterval(()=>fetchAll(false),5*60*1000);
@@ -559,7 +567,8 @@ export default function TrendRadarV5() {
           {workflowStep===1&&"🤖 Claude가 콘텐츠 기회를 분석중..."}
           {workflowStep===2&&"📺 유튜브 벤치마킹 탭에서 경쟁 영상을 분석하세요"}
           {workflowStep===3&&"⚡ 교차분석 탭에서 블루오션 각도를 찾으세요!"}
-          {workflowStep===4&&"🎬 파이프라인에서 제작 단계를 관리하세요"}
+          {workflowStep===4&&"⚡ 교차분석 탭에서 블루오션 각도를 찾으세요!"}
+          {workflowStep===5&&"✅ 파이프라인에 추가됐어요! 채널분석도 해보세요 →"}
         </div>
       </div>
 
@@ -1129,11 +1138,26 @@ export default function TrendRadarV5() {
               {crossResult.final_title&&(
                 <button onClick={()=>{
                   setPipe(p=>[...p,{id:Date.now(),trend:`[교차분석] ${sel?.title?.slice(0,30)||ytKeyword}`,video:crossResult.final_title,format:crossResult.final_format||"롱폼",stage:"discovered",added:new Date().toLocaleString("ko-KR"),score:crossResult.score*10}]);
-                  setTab("pipeline");
+                  setWorkflowStep(5);
                 }} style={{width:"100%",padding:"13px",borderRadius:10,background:`linear-gradient(135deg,${T.acd},${T.gd})`,border:`1px solid ${T.acb}`,color:T.t,fontSize:14,fontWeight:800,cursor:"pointer"}}>
                   📋 최종 영상 파이프라인에 추가 →
                 </button>
               )}
+
+              {/* 다음 단계 안내 */}
+              <div style={{background:T.s2,border:`1px solid ${T.ba}`,borderRadius:10,padding:12,marginTop:10}}>
+                <div style={{fontSize:11,color:T.ts,fontFamily:T.m,fontWeight:600,marginBottom:8}}>🎯 다음 단계</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+                  <button onClick={()=>setTab("channel")}
+                    style={{padding:"9px",borderRadius:8,background:`${T.ro}0a`,border:`1px solid ${T.ro}30`,color:T.ro,fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                    📊 채널분석 →
+                  </button>
+                  <button onClick={()=>setTab("pipeline")}
+                    style={{padding:"9px",borderRadius:8,background:T.acd,border:`1px solid ${T.acb}`,color:T.ac,fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                    📋 파이프라인 →
+                  </button>
+                </div>
+              </div>
 
               {/* 다시 분석 */}
               <button onClick={()=>{setCrossResult(null);setCrossError("");}}
