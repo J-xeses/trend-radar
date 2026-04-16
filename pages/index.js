@@ -845,26 +845,6 @@ export default function TrendRadarV5() {
             </div>
           ))}
 
-          {/* 더미 - 기존 코드와 연결 위해 유지 */}
-          {false&&ytVideos.map((v,i)=>(
-            <div key={v.id}>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
-                <input
-                  value={v.likes}
-                  onChange={e=>setYtVideos(prev=>prev.map((p,j)=>j===i?{...p,likes:e.target.value}:p))}
-                  placeholder="좋아요 (예: 3.2만)"
-                  style={{}}
-                />
-                <input
-                  value={v.uploadDate}
-                  onChange={e=>setYtVideos(prev=>prev.map((p,j)=>j===i?{...p,uploadDate:e.target.value}:p))}
-                    placeholder="업로드 날짜 (예: 2주 전)"
-                    style={{background:T.s2,border:`1px solid ${T.b}`,borderRadius:7,padding:"8px 10px",color:T.t,fontSize:12,boxSizing:"border-box"}}
-                  />
-                </div>
-              </div>
-            </div>
-          ))}
 
           {/* 영상 추가 버튼 */}
 
