@@ -773,6 +773,76 @@ export default function TrendRadarV5() {
                 </div>
               ))}
               {script.desc&&<div style={{background:T.c,borderRadius:9,padding:12,marginTop:10}}><div style={{fontSize:10,color:T.tm,fontFamily:T.m,fontWeight:600,marginBottom:4}}>📝 영상 설명문</div><div style={{fontSize:12,lineHeight:1.6,color:T.ts}}>{script.desc}</div></div>}
+
+              {/* ── 제작 도구 연결 ── */}
+              <div style={{marginTop:16,background:`${T.am}08`,border:`1px solid ${T.amb}`,borderRadius:12,padding:14}}>
+                <div style={{fontSize:12,fontWeight:800,color:T.am,marginBottom:4}}>🎬 다음 단계 — 제작 도구로 이어가기</div>
+                <div style={{fontSize:11,color:T.ts,marginBottom:12,lineHeight:1.6}}>
+                  대본 초안이 완성됐어요! 아래 도구들로 영상 제작을 시작하세요.
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+                  {/* Vrew */}
+                  <a href="https://vrew.ai" target="_blank" rel="noreferrer"
+                    style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",borderRadius:9,background:"#5b5bd610",border:"1px solid #5b5bd640",textDecoration:"none"}}>
+                    <span style={{fontSize:18}}>🎬</span>
+                    <div>
+                      <div style={{fontSize:12,fontWeight:700,color:"#818cf8"}}>Vrew</div>
+                      <div style={{fontSize:10,color:T.ts}}>AI 영상편집 + 자막</div>
+                    </div>
+                    <span style={{marginLeft:"auto",color:"#818cf8",fontSize:11}}>→</span>
+                  </a>
+                  {/* Gemini Gems */}
+                  <a href="https://gemini.google.com/gems" target="_blank" rel="noreferrer"
+                    style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",borderRadius:9,background:"#4285f410",border:"1px solid #4285f440",textDecoration:"none"}}>
+                    <span style={{fontSize:18}}>💎</span>
+                    <div>
+                      <div style={{fontSize:12,fontWeight:700,color:"#4285f4"}}>Gemini Gems</div>
+                      <div style={{fontSize:10,color:T.ts}}>대본 다듬기 + 이미지</div>
+                    </div>
+                    <span style={{marginLeft:"auto",color:"#4285f4",fontSize:11}}>→</span>
+                  </a>
+                  {/* CapCut */}
+                  <a href="https://www.capcut.com" target="_blank" rel="noreferrer"
+                    style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",borderRadius:9,background:"#00d4aa10",border:"1px solid #00d4aa40",textDecoration:"none"}}>
+                    <span style={{fontSize:18}}>✂️</span>
+                    <div>
+                      <div style={{fontSize:12,fontWeight:700,color:"#00d4aa"}}>CapCut</div>
+                      <div style={{fontSize:10,color:T.ts}}>편집 + 효과 + 자막</div>
+                    </div>
+                    <span style={{marginLeft:"auto",color:"#00d4aa",fontSize:11}}>→</span>
+                  </a>
+                  {/* YouTube Studio */}
+                  <a href="https://studio.youtube.com" target="_blank" rel="noreferrer"
+                    style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",borderRadius:9,background:"#ff000010",border:"1px solid #ff000040",textDecoration:"none"}}>
+                    <span style={{fontSize:18}}>📺</span>
+                    <div>
+                      <div style={{fontSize:12,fontWeight:700,color:"#ff4444"}}>YouTube Studio</div>
+                      <div style={{fontSize:10,color:T.ts}}>업로드 + 관리</div>
+                    </div>
+                    <span style={{marginLeft:"auto",color:"#ff4444",fontSize:11}}>→</span>
+                  </a>
+                </div>
+                {/* 대본 복사 버튼 */}
+                <button onClick={()=>{
+                  const scriptText = [
+                    `📌 영상 제목: ${sel?.title||""}`,
+                    ``,
+                    `🎯 오프닝 후킹 (15초):`,
+                    `"${script.hook||""}"`,
+                    ``,
+                    ...(script.sections||[]).map(s=>`[${s.ts}] ${s.name}
+${s.desc}`),
+                    ``,
+                    `📝 영상 설명문:`,
+                    script.desc||""
+                  ].join('
+');
+                  navigator.clipboard.writeText(scriptText).then(()=>alert('✅ 대본이 클립보드에 복사됐어요!
+Vrew나 Gems에 붙여넣기 하세요.'));
+                }} style={{width:"100%",padding:"10px",borderRadius:9,background:T.gd,border:`1px solid ${T.gb}`,color:T.g,fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                  📋 대본 전체 복사 (Vrew/Gems에 붙여넣기용)
+                </button>
+              </div>
             </div>}
           </div>
         )}
