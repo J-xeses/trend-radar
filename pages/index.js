@@ -456,6 +456,7 @@ export default function TrendRadarV5() {
       const data = await res.json();
       if(!res.ok) throw new Error(data.error||"채널 분석 실패");
       setChResults(prev=>({...prev,[idx]:data.result||{}}));
+      setWorkflowStep(4);
     }catch(e){
       setChError(e.message||"채널 분석 실패");
     }
@@ -551,24 +552,26 @@ export default function TrendRadarV5() {
         <div style={{fontSize:10,fontFamily:T.m,color:T.tm,marginBottom:10,fontWeight:600,letterSpacing:".08em"}}>WORKFLOW — 콘텐츠 제작 파이프라인</div>
         <div style={{display:"flex",alignItems:"center",gap:0}}>
           <WorkflowStep label="수집" icon="📡" active={workflowStep===0} done={workflowStep>0}/>
-          <div style={{color:T.tm,fontSize:14,paddingBottom:16,flexShrink:0,margin:"0 1px"}}>›</div>
+          <div style={{color:T.tm,fontSize:12,paddingBottom:16,flexShrink:0}}>›</div>
           <WorkflowStep label="AI분석" icon="🤖" active={workflowStep===1} done={workflowStep>1}/>
-          <div style={{color:T.tm,fontSize:14,paddingBottom:16,flexShrink:0,margin:"0 1px"}}>›</div>
+          <div style={{color:T.tm,fontSize:12,paddingBottom:16,flexShrink:0}}>›</div>
           <WorkflowStep label="유튜브" icon="📺" active={workflowStep===2} done={workflowStep>2}/>
-          <div style={{color:T.tm,fontSize:14,paddingBottom:16,flexShrink:0,margin:"0 1px"}}>›</div>
+          <div style={{color:T.tm,fontSize:12,paddingBottom:16,flexShrink:0}}>›</div>
           <WorkflowStep label="교차분석" icon="⚡" active={workflowStep===3} done={workflowStep>3}/>
-          <div style={{color:T.tm,fontSize:14,paddingBottom:16,flexShrink:0,margin:"0 1px"}}>›</div>
-          <WorkflowStep label="파이프라인" icon="📋" active={workflowStep===4} done={false}/>
+          <div style={{color:T.tm,fontSize:12,paddingBottom:16,flexShrink:0}}>›</div>
+          <WorkflowStep label="채널분석" icon="📊" active={workflowStep===4} done={workflowStep>4}/>
+          <div style={{color:T.tm,fontSize:12,paddingBottom:16,flexShrink:0}}>›</div>
+          <WorkflowStep label="파이프라인" icon="📋" active={workflowStep===5} done={false}/>
         </div>
         <div style={{fontSize:11,marginTop:8,textAlign:"center",fontWeight:600,
-          color:workflowStep===0?T.ts:workflowStep===1?T.ac:workflowStep===2?T.cy:workflowStep===3?T.r:T.g,
+          color:workflowStep===0?T.ts:workflowStep===1?T.ac:workflowStep===2?T.cy:workflowStep===3?T.r:workflowStep===4?T.ro:T.g,
           animation:workflowStep===1||workflowStep===3?"pulse 1.5s infinite":"none"}}>
           {workflowStep===0&&"👆 트렌드 카드 클릭 → AI 분석 시작"}
           {workflowStep===1&&"🤖 Claude가 콘텐츠 기회를 분석중..."}
-          {workflowStep===2&&"📺 유튜브 벤치마킹 탭에서 경쟁 영상을 분석하세요"}
-          {workflowStep===3&&"⚡ 교차분석 탭에서 블루오션 각도를 찾으세요!"}
-          {workflowStep===4&&"⚡ 교차분석 탭에서 블루오션 각도를 찾으세요!"}
-          {workflowStep===5&&"✅ 파이프라인에 추가됐어요! 채널분석도 해보세요 →"}
+          {workflowStep===2&&"📺 유튜브 탭 → 경쟁 영상 분석하세요"}
+          {workflowStep===3&&"⚡ 교차분석 탭 → 블루오션 각도를 찾으세요!"}
+          {workflowStep===4&&"📊 채널분석 탭 → 경쟁 채널을 분석하세요"}
+          {workflowStep===5&&"📋 파이프라인에 추가됐어요! 제작을 시작하세요 🎬"}
         </div>
       </div>
 
@@ -1145,16 +1148,19 @@ export default function TrendRadarV5() {
               )}
 
               {/* 다음 단계 안내 */}
-              <div style={{background:T.s2,border:`1px solid ${T.ba}`,borderRadius:10,padding:12,marginTop:10}}>
-                <div style={{fontSize:11,color:T.ts,fontFamily:T.m,fontWeight:600,marginBottom:8}}>🎯 다음 단계</div>
+              <div style={{background:`${T.ro}08`,border:`1px solid ${T.ro}30`,borderRadius:10,padding:14,marginTop:10}}>
+                <div style={{fontSize:12,fontWeight:800,color:T.t,marginBottom:4}}>📊 다음 단계 — 채널 분석 추천</div>
+                <div style={{fontSize:11,color:T.ts,lineHeight:1.7,marginBottom:10}}>
+                  교차분석이 완료됐어요! 경쟁 채널을 분석하면 더 정확한 차별화 전략을 세울 수 있어요.
+                </div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
-                  <button onClick={()=>setTab("channel")}
-                    style={{padding:"9px",borderRadius:8,background:`${T.ro}0a`,border:`1px solid ${T.ro}30`,color:T.ro,fontSize:12,fontWeight:700,cursor:"pointer"}}>
-                    📊 채널분석 →
+                  <button onClick={()=>{setWorkflowStep(4);setTab("channel");}}
+                    style={{padding:"10px",borderRadius:8,background:`${T.ro}15`,border:`1px solid ${T.ro}40`,color:T.ro,fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                    📊 채널분석 시작 →
                   </button>
-                  <button onClick={()=>setTab("pipeline")}
-                    style={{padding:"9px",borderRadius:8,background:T.acd,border:`1px solid ${T.acb}`,color:T.ac,fontSize:12,fontWeight:700,cursor:"pointer"}}>
-                    📋 파이프라인 →
+                  <button onClick={()=>{setWorkflowStep(5);setTab("pipeline");}}
+                    style={{padding:"10px",borderRadius:8,background:T.acd,border:`1px solid ${T.acb}`,color:T.ac,fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                    📋 파이프라인 바로가기
                   </button>
                 </div>
               </div>
@@ -1340,13 +1346,19 @@ export default function TrendRadarV5() {
                       </div>
                     )}
 
-                    {/* 교차분석 연결 */}
-                    {analysis&&(
-                      <button onClick={()=>setTab("cross")}
-                        style={{width:"100%",padding:"10px",borderRadius:9,background:`${T.r}0a`,border:`1px solid ${T.rb}`,color:T.r,fontSize:12,fontWeight:700,cursor:"pointer"}}>
-                        ⚡ 이 채널 분석 + 트렌드 교차분석으로 이동 →
+                    {/* 다음 단계 버튼 */}
+                    <div style={{display:"grid",gridTemplateColumns:analysis?"1fr 1fr":"1fr",gap:8,marginTop:4}}>
+                      {analysis&&(
+                        <button onClick={()=>setTab("cross")}
+                          style={{padding:"10px",borderRadius:9,background:`${T.r}0a`,border:`1px solid ${T.rb}`,color:T.r,fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                          ⚡ 교차분석으로 →
+                        </button>
+                      )}
+                      <button onClick={()=>{setWorkflowStep(5);setTab("pipeline");}}
+                        style={{padding:"10px",borderRadius:9,background:T.acd,border:`1px solid ${T.acb}`,color:T.ac,fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                        📋 파이프라인으로 →
                       </button>
-                    )}
+                    </div>
                   </div>
                 );
               })()}
@@ -1359,10 +1371,30 @@ export default function TrendRadarV5() {
       {tab==="pipeline"&&(
         <div style={{padding:16,animation:"fadeUp .3s ease"}}>
           {!pipe.length?(
-            <div style={{textAlign:"center",padding:60,color:T.tm}}>
-              <div style={{fontSize:48,marginBottom:12}}>📋</div>
-              <div style={{fontSize:16,fontWeight:700,marginBottom:8}}>파이프라인이 비어있습니다</div>
-              <div style={{fontSize:13,color:T.ts,lineHeight:1.8}}>트렌드 클릭 → AI 분석 → 영상 아이디어 → 파이프라인 추가</div>
+            <div style={{textAlign:"center",padding:40,color:T.tm}}>
+              <div style={{fontSize:44,marginBottom:12}}>📋</div>
+              <div style={{fontSize:16,fontWeight:700,marginBottom:8,color:T.t}}>파이프라인이 비어있어요</div>
+              <div style={{fontSize:12,color:T.ts,lineHeight:1.9,marginBottom:20}}>
+                아래 단계를 순서대로 진행하면 자동으로 채워져요!
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:8,maxWidth:320,margin:"0 auto",textAlign:"left"}}>
+                {[
+                  {step:"1",icon:"🔍",label:"트렌드 탭",desc:"트렌드 카드 클릭 → AI 분석",tab:"trends",color:T.ac},
+                  {step:"2",icon:"📺",label:"유튜브 탭",desc:"키워드 검색 → 영상 정보 입력",tab:"youtube",color:T.cy},
+                  {step:"3",icon:"⚡",label:"교차분석 탭",desc:"블루오션 각도 발견",tab:"cross",color:T.r},
+                  {step:"4",icon:"📊",label:"채널분석 탭",desc:"경쟁 채널 파악 (선택)",tab:"channel",color:T.ro},
+                ].map(s=>(
+                  <button key={s.step} onClick={()=>setTab(s.tab)}
+                    style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:10,background:T.c,border:`1px solid ${s.color}20`,cursor:"pointer",textAlign:"left"}}>
+                    <span style={{fontSize:16,flexShrink:0}}>{s.icon}</span>
+                    <div>
+                      <div style={{fontSize:12,fontWeight:700,color:s.color}}>{s.step}. {s.label}</div>
+                      <div style={{fontSize:11,color:T.ts}}>{s.desc}</div>
+                    </div>
+                    <span style={{marginLeft:"auto",color:s.color,fontSize:12}}>→</span>
+                  </button>
+                ))}
+              </div>
             </div>
           ):(
             <>
