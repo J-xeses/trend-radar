@@ -188,16 +188,13 @@ async function fetchGH() {
 
 /* ─── YouTube Fetchers ─── */
 
-// 방법2: 유튜브 급상승 트렌딩 (한국) — RSS/Trending 페이지 파싱
+// 방법2: 유튜브 급상승 (한국) — 서버사이드 경유 (CORS 해결)
 async function fetchYTTrending() {
   try {
-    // 유튜브 트렌딩 RSS (공개 엔드포인트)
-    const urls = [
-      "https://www.youtube.com/feeds/videos.xml?chart=0&gl=KR&hl=ko", // 급상승 KR
-    ];
-    const res = await fetch(urls[0]);
-    const text = await res.text();
-    const xml = new DOMParser().parseFromString(text,"text/xml");
+    const res = await fetch("/api/youtube?type=trending");
+    const data = await res.json();
+    if (!data.xml) return [];
+    const xml = new DOMParser().parseFromString(data.xml,"text/xml");
     const entries = xml.querySelectorAll("entry");
     const r = [];
     entries.forEach((entry,i)=>{
@@ -207,15 +204,15 @@ async function fetchYTTrending() {
                       entry.querySelector("id")?.textContent?.split(":").pop()||"";
       const published = entry.querySelector("published")?.textContent||"";
       const viewCount = parseInt(entry.querySelector("statistics")?.getAttribute("views")||"0")||0;
-      const url = videoId ? `https://www.youtube.com/watch?v=${videoId}` : "https://www.youtube.com";
+      const url = videoId?`https://www.youtube.com/watch?v=${videoId}`:"https://www.youtube.com";
       r.push({
         id:`ytk-${i}-${Date.now()}`,
         title,
         url,
-        score: Math.min(100, Math.round(viewCount/10000))||60,
+        score:Math.min(100,Math.round(viewCount/10000))||60,
         comments:0,
         source:"youtube_kr",
-        time: published ? new Date(published).getTime() : Date.now()-i*3600000,
+        time:published?new Date(published).getTime():Date.now()-i*3600000,
         tagline:"🇰🇷 유튜브 급상승"
       });
     });
@@ -223,7 +220,7 @@ async function fetchYTTrending() {
   } catch { return []; }
 }
 
-// 방법1: 한국 유튜브 채널 RSS 피드 수집 (채널명 RSS에서 자동 추출)
+// 방법1: 한국 유튜브 채널 RSS — 서버사이드 경유 (CORS 해결)
 async function fetchYTChannels() {
   const channelIds = [
     "UCYM3qUEffEx-u48OG-6BRbg",
@@ -236,36 +233,38 @@ async function fetchYTChannels() {
     "UCNHhTJTUoHa_LZwl3Js-8pQ",
   ];
   const results = [];
-  await Promise.all(channelIds.map(async(cid)=>{
-    try {
-      const res = await fetch(`https://www.youtube.com/feeds/videos.xml?channel_id=${cid}`);
-      const text = await res.text();
-      const xml = new DOMParser().parseFromString(text,"text/xml");
-      // 채널 이름 RSS에서 자동 추출
-      const chName = xml.querySelector("author name")?.textContent ||
-                     xml.querySelector("feed > title")?.textContent ||
-                     `채널(${cid.slice(2,8)})`;
-      const entries = xml.querySelectorAll("entry");
-      entries.forEach((entry,i)=>{
-        if (i>=3) return;
-        const title = entry.querySelector("title")?.textContent||"";
-        const videoId = entry.querySelector("videoId")?.textContent||"";
-        const published = entry.querySelector("published")?.textContent||"";
-        const viewCount = parseInt(entry.querySelector("statistics")?.getAttribute("views")||"0")||0;
-        if (!title) return;
-        results.push({
-          id:`ytch-${cid.slice(2,8)}-${i}-${Date.now()}`,
-          title:`[${chName}] ${title}`,
-          url: videoId?`https://www.youtube.com/watch?v=${videoId}`:`https://www.youtube.com/channel/${cid}`,
-          score: Math.min(95, 60+Math.min(35,Math.round(viewCount/50000))),
-          comments:0,
-          source:"youtube_ch",
-          time: published?new Date(published).getTime():Date.now()-i*7200000,
-          tagline:`📺 ${chName}`
+  try {
+    const res = await fetch(`/api/youtube?type=channels&ids=${channelIds.join(",")}`);
+    const data = await res.json();
+    (data.channels||[]).forEach(({cid, xml})=>{
+      if (!xml) return;
+      try {
+        const doc = new DOMParser().parseFromString(xml,"text/xml");
+        const chName = doc.querySelector("author name")?.textContent ||
+                       doc.querySelector("feed > title")?.textContent ||
+                       `채널(${cid.slice(2,8)})`;
+        const entries = doc.querySelectorAll("entry");
+        entries.forEach((entry,i)=>{
+          if (i>=3) return;
+          const title = entry.querySelector("title")?.textContent||"";
+          const videoId = entry.querySelector("videoId")?.textContent||"";
+          const published = entry.querySelector("published")?.textContent||"";
+          const viewCount = parseInt(entry.querySelector("statistics")?.getAttribute("views")||"0")||0;
+          if (!title) return;
+          results.push({
+            id:`ytch-${cid.slice(2,8)}-${i}-${Date.now()}`,
+            title:`[${chName}] ${title}`,
+            url:videoId?`https://www.youtube.com/watch?v=${videoId}`:`https://www.youtube.com/channel/${cid}`,
+            score:Math.min(95,60+Math.min(35,Math.round(viewCount/50000))),
+            comments:0,
+            source:"youtube_ch",
+            time:published?new Date(published).getTime():Date.now()-i*7200000,
+            tagline:`📺 ${chName}`
+          });
         });
-      });
-    } catch {}
-  }));
+      } catch {}
+    });
+  } catch {}
   return results;
 }
 
