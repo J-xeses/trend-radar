@@ -9,7 +9,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const { type, trend, video, videos, keyword, trendAnalysis, ytAnalysis, channel, apiKey } = req.body;
+  const { type, trend, video, videos, keyword, trendAnalysis, ytAnalysis, channel, style, apiKey } = req.body;
 
   if (!apiKey) {
     return res.status(400).json({ error: "API Key가 필요합니다." });
@@ -105,8 +105,58 @@ ${(channel.recentVideos || []).map((v,i) => `${i+1}. "${v.title}" | ${v.views} |
   "overall": "종합 평가 2-3문장 한국어"
 }`;
 
+  } else if (type === "drama_prompt") {
+    // 스타일별 프롬프트 분기
+    const styleMap = {
+      shortform: { label:"숏폼(60초)", tone:"임팩트 있고 빠른 전개, 첫 3초 강렬한 후킹 필수, 자막 크고 선명하게", structure:"문제제기(1~2컷)→공감(3~4컷)→핵심반전(5~7컷)→CTA(8~9컷)", duration:"각 컷 5~8초" },
+      longform:  { label:"롱폼(10분)", tone:"깊이 있는 스토리, 천천히 감정을 쌓아가는 구성", structure:"도입→문제상황→심화갈등→해결과정→교훈→CTA", duration:"각 컷 60~90초 분량" },
+      vlog:      { label:"브이로그", tone:"자연스럽고 친근한 1인칭 시점, 핸드헬드 카메라 느낌, 편안한 말투", structure:"하루시작→이슈발견→솔직한반응→해결과정→마무리소감", duration:"각 컷 자연스럽게" },
+      tutorial:  { label:"튜토리얼", tone:"명확하고 단계별 설명, 화면 캡처+자막 강조, 친절한 설명체", structure:"목표제시→준비물→1단계→2단계→3단계→결과확인→꿀팁→주의사항→CTA", duration:"각 컷 30~60초" },
+      interview: { label:"인터뷰", tone:"대화형, 질문-답변 구조, 인사이트 중심, 자연스러운 리액션", structure:"게스트소개→배경→핵심질문1→핵심질문2→심화→공감→조언→미래전망→마무리", duration:"각 컷 30~60초" },
+      drama:     { label:"드라마/PSA", tone:"공익광고 스타일, 인식의 전환이 핵심, 밝고 따뜻한 화면, 감성 극대화", structure:"일상오해(1~2컷)→갈등(3~4컷)→관찰반전(5~6컷)→이해공감(7~8컷)→메시지(9컷)", duration:"각 컷 5~10초" },
+    };
+    const st = styleMap[style||"shortform"] || styleMap.shortform;
+
+    prompt = `당신은 세계적인 광고 전문가이자 영상 스토리텔러입니다. 한국 직장인 20-40대를 타겟으로 하는 "AI × 자기계발" 유튜브 채널을 위한 ${st.label} 영상 제작 프롬프트를 생성합니다.
+
+영상 주제: "${video.title}"
+채널 앵글: "${video.angle||""}"
+스타일: ${st.label}
+연출 톤: ${st.tone}
+컷 구성: ${st.structure}
+컷 길이 기준: ${st.duration}
+
+반드시 순수 JSON만 응답. 마크다운 없이.
+
+아래 형식 JSON 반환:
+{
+  "style": "${style||"shortform"}",
+  "logline": "한 줄 스토리 요약 한국어",
+  "characters": [
+    {"name":"이름","age":"나이","personality":"성격 한국어","image_prompt":"Cinematic portrait, [description], neutral calm expression, 8K, photorealistic"}
+  ],
+  "storyline": "줄거리 요약 한국어 (스타일에 맞게)",
+  "bgm_mood": "BGM/분위기 제안 한국어",
+  "cuts": [
+    {
+      "cut": 1,
+      "scene": "화면/연출 설명 한국어 (${st.label} 스타일에 맞게)",
+      "dialogue": "대사 또는 나레이션 한국어 (없으면 빈 문자열)",
+      "is_narration": false,
+      "image_prompt": "Cinematic [shot type], [setting matching ${st.label} style]. [Character] (Asset 1) [action]. Bright warm Korean lifestyle, film grain, --ar 16:9",
+      "video_prompt": "[Motion matching ${st.label}]. Audio: [audio instruction]. Strictly NO background music. Clean voices and natural ambient SFX only. Lock temporal/spatial continuity. Unbroken single-take only. Enforce strict anatomical correctness. Zero flickering or melting. Strictly preserve all visible Hangul."
+    }
+  ],
+  "core_message": "핵심 메시지 한국어",
+  "editing_guide": {
+    "vrew": "Vrew 편집 방향 한국어 (${st.label} 스타일)",
+    "capcut": "CapCut 효과/스타일 한국어",
+    "subtitle_style": "자막 스타일 제안 한국어"
+  }
+}`;
+
   } else {
-    return res.status(400).json({ error: "type은 analyze, script, youtube_benchmark, cross_analysis, channel_analysis 여야 합니다." });
+    return res.status(400).json({ error: "type은 analyze, script, youtube_benchmark, cross_analysis, channel_analysis, drama_prompt 여야 합니다." });
   }
 
   try {
