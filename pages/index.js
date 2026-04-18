@@ -313,6 +313,13 @@ export default function TrendRadarV5() {
   const [chLoading, setChLoading] = useState(false);
   const [chResults, setChResults] = useState({});
   const [chError, setChError] = useState("");
+  // 드라마 프롬프트 생성
+  const [dramaLoading, setDramaLoading] = useState(false);
+  const [dramaResult, setDramaResult] = useState(null);
+  const [dramaError, setDramaError] = useState("");
+  const [dramaVideo, setDramaVideo] = useState(null);
+  const [showDramaModal, setShowDramaModal] = useState(false);
+  const [dramaStyle, setDramaStyle] = useState("shortform"); // shortform | longform | vlog | tutorial | interview
   const timer = useRef(null);
   const analysisRef = useRef(null);
 
@@ -463,6 +470,31 @@ export default function TrendRadarV5() {
     setChLoading(false);
   },[apiKey,channels]);
 
+  /* ── 드라마 프롬프트 생성 ── */
+  const genDramaPrompt = useCallback(async(v)=>{
+    if(!apiKey){setShowApiModal(true);return;}
+    setDramaLoading(true);setDramaResult(null);setDramaError("");
+    setDramaVideo(v);setShowDramaModal(true);
+    try{
+      const res = await fetch("/api/analyze",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          type:"drama_prompt",
+          video:{...v, angle:analysis?.angle||""},
+          style:dramaStyle,
+          apiKey
+        }),
+      });
+      const data = await res.json();
+      if(!res.ok) throw new Error(data.error||"드라마 프롬프트 생성 실패");
+      setDramaResult(data.result||{});
+    }catch(e){
+      setDramaError(e.message||"생성 실패");
+    }
+    setDramaLoading(false);
+  },[apiKey,analysis]);
+
   const benchmarkYoutube = useCallback(async()=>{
     if(!apiKey){setShowApiModal(true);return;}
     const validVideos = ytVideos.filter(v=>v.title.trim());
@@ -516,6 +548,215 @@ export default function TrendRadarV5() {
       `}</style>
 
       {showApiModal&&<ApiKeyModal onSave={saveApiKey} onSkip={()=>setShowApiModal(false)}/>}
+
+      {/* ══ 드라마 프롬프트 모달 ══ */}
+      {showDramaModal&&(
+        <div style={{position:"fixed",inset:0,background:"#000000cc",zIndex:200,display:"flex",alignItems:"flex-start",justifyContent:"center",padding:"16px",overflowY:"auto"}}>
+          <div style={{background:T.s,border:`1px solid ${T.ro}40`,borderRadius:18,width:"100%",maxWidth:560,animation:"fadeUp .3s ease",marginTop:20}}>
+
+            {/* 헤더 */}
+            <div style={{padding:"16px 20px",borderBottom:`1px solid ${T.b}`,display:"flex",alignItems:"center",gap:10,background:`linear-gradient(135deg,${T.ro}15,transparent)`}}>
+              <span style={{fontSize:22}}>🎬</span>
+              <div style={{flex:1}}>
+                <div style={{fontSize:14,fontWeight:800,color:T.t}}>AI 영상 제작 프롬프트</div>
+                <div style={{fontSize:11,color:T.ts,marginTop:2}}>Gems · Vrew · CapCut · Veo 등 어떤 도구에도 사용 가능</div>
+              </div>
+              <button onClick={()=>setShowDramaModal(false)} style={{width:28,height:28,borderRadius:7,background:T.c,border:`1px solid ${T.b}`,color:T.ts,cursor:"pointer",fontSize:14}}>✕</button>
+            </div>
+
+            <div style={{padding:16}}>
+
+              {/* ── 스타일 선택 탭 ── */}
+              {!dramaResult&&!dramaLoading&&(
+                <div style={{marginBottom:16}}>
+                  <div style={{fontSize:11,color:T.ts,fontFamily:T.m,fontWeight:600,marginBottom:8}}>영상 스타일 선택</div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+                    {[
+                      {id:"shortform", icon:"⚡", label:"숏폼", desc:"60초 · 9컷 임팩트"},
+                      {id:"longform",  icon:"🎞️", label:"롱폼", desc:"10분 · 깊이있는 스토리"},
+                      {id:"vlog",      icon:"📹", label:"브이로그", desc:"일상 · 자연스러운 연출"},
+                      {id:"tutorial",  icon:"📚", label:"튜토리얼", desc:"단계별 · 교육 콘텐츠"},
+                      {id:"interview", icon:"🎙️", label:"인터뷰", desc:"대화 · 인사이트 전달"},
+                      {id:"drama",     icon:"🎭", label:"드라마", desc:"PSA · 감성 스토리텔링"},
+                    ].map(s=>(
+                      <button key={s.id} onClick={()=>setDramaStyle(s.id)}
+                        style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",borderRadius:10,border:`2px solid ${dramaStyle===s.id?T.ro+"80":T.b}`,background:dramaStyle===s.id?`${T.ro}12`:T.c,cursor:"pointer",transition:"all .15s",textAlign:"left"}}>
+                        <span style={{fontSize:20,flexShrink:0}}>{s.icon}</span>
+                        <div>
+                          <div style={{fontSize:12,fontWeight:700,color:dramaStyle===s.id?T.ro:T.t}}>{s.label}</div>
+                          <div style={{fontSize:10,color:T.ts}}>{s.desc}</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    onClick={()=>{
+                      setDramaLoading(true);setDramaResult(null);setDramaError("");
+                      fetch("/api/analyze",{
+                        method:"POST",
+                        headers:{"Content-Type":"application/json"},
+                        body:JSON.stringify({type:"drama_prompt",video:{...dramaVideo,angle:analysis?.angle||""},style:dramaStyle,apiKey}),
+                      }).then(r=>r.json()).then(data=>{
+                        if(data.error) throw new Error(data.error);
+                        setDramaResult(data.result||{});
+                      }).catch(e=>setDramaError(e.message||"생성 실패"))
+                      .finally(()=>setDramaLoading(false));
+                    }}
+                    style={{width:"100%",padding:"13px",borderRadius:10,background:`linear-gradient(135deg,${T.ro},${T.ac})`,border:"none",color:"#fff",fontSize:14,fontWeight:800,cursor:"pointer",marginTop:12}}>
+                    🎬 {["shortform","longform","vlog","tutorial","interview","drama"].includes(dramaStyle)
+                      ? {shortform:"숏폼",longform:"롱폼",vlog:"브이로그",tutorial:"튜토리얼",interview:"인터뷰",drama:"드라마"}[dramaStyle]
+                      : ""} 프롬프트 생성 시작!
+                  </button>
+                </div>
+              )}
+
+              {dramaLoading&&(
+                <div style={{textAlign:"center",padding:40}}>
+                  <Spin s={32} c={T.ro}/>
+                  <div style={{marginTop:14,fontSize:14,fontWeight:700,color:T.t,animation:"pulse 1.5s infinite"}}>9컷 스토리보드 생성중...</div>
+                  <div style={{marginTop:6,fontSize:11,color:T.ts}}>이미지 · 영상 프롬프트까지 자동 생성돼요</div>
+                </div>
+              )}
+              {dramaError&&<div style={{padding:12,background:T.rd,borderRadius:9,fontSize:12,color:T.r}}>{dramaError}</div>}
+
+              {dramaResult&&!dramaLoading&&(()=>{
+                const r = dramaResult;
+
+                // 이미지 프롬프트 모아서 텍스트 생성
+                const imagePrompts = (r.cuts||[]).map((c,i)=>`Cut ${c.cut||i+1}: ${c.image_prompt||""}`).join('
+');
+                const videoPrompts = (r.cuts||[]).map((c,i)=>`Cut ${c.cut||i+1}: ${c.video_prompt||""}`).join('
+');
+                const fullScript = [
+                  `🎬 ${dramaVideo?.title||""}`,
+                  `📖 로그라인: ${r.logline||""}`,
+                  `💡 핵심 메시지: ${r.core_message||""}`,
+                  ``,
+                  `=== 등장인물 ===`,
+                  ...(r.characters||[]).map(c=>`• ${c.name} (${c.age}) — ${c.personality}`),
+                  ``,
+                  `=== 9컷 스토리보드 ===`,
+                  ...(r.cuts||[]).map(c=>`[Cut ${c.cut}] ${c.scene}
+${c.dialogue?"대사: "+c.dialogue:""}`),
+                ].join('
+');
+
+                return (
+                  <div>
+                    {/* 스타일 배지 + 다시 선택 */}
+                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+                      <span style={{fontSize:11,padding:"4px 10px",borderRadius:12,background:`${T.ro}15`,border:`1px solid ${T.ro}40`,color:T.ro,fontWeight:700}}>
+                        { {shortform:"⚡ 숏폼",longform:"🎞️ 롱폼",vlog:"📹 브이로그",tutorial:"📚 튜토리얼",interview:"🎙️ 인터뷰",drama:"🎭 드라마"}[r.style||dramaStyle] || "🎬 영상" }
+                      </span>
+                      <button onClick={()=>{setDramaResult(null);setDramaError("");}}
+                        style={{marginLeft:"auto",fontSize:10,padding:"4px 10px",borderRadius:8,background:T.c,border:`1px solid ${T.b}`,color:T.ts,cursor:"pointer"}}>
+                        ↩ 스타일 다시 선택
+                      </button>
+                    </div>
+
+                    {/* 로그라인 */}
+                    <div style={{background:`${T.ro}0a`,border:`1px solid ${T.ro}30`,borderRadius:10,padding:12,marginBottom:12}}>
+                      <div style={{fontSize:10,color:T.ro,fontFamily:T.m,fontWeight:700,marginBottom:4}}>📖 로그라인</div>
+                      <div style={{fontSize:13,fontWeight:700,lineHeight:1.6}}>{r.logline}</div>
+                    </div>
+
+                    {/* 핵심 메시지 */}
+                    {r.core_message&&(
+                      <div style={{background:T.c,borderRadius:9,padding:10,marginBottom:12}}>
+                        <div style={{fontSize:10,color:T.ts,fontFamily:T.m,fontWeight:600,marginBottom:3}}>💡 핵심 메시지</div>
+                        <div style={{fontSize:12,color:T.t}}>{r.core_message}</div>
+                      </div>
+                    )}
+
+                    {/* 등장인물 */}
+                    {(r.characters||[]).length>0&&(
+                      <div style={{marginBottom:12}}>
+                        <div style={{fontSize:10,color:T.ts,fontFamily:T.m,fontWeight:600,marginBottom:6}}>👥 등장인물</div>
+                        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                          {r.characters.map((c,i)=>(
+                            <div key={i} style={{background:T.c,borderRadius:8,padding:"8px 10px",flex:1,minWidth:120}}>
+                              <div style={{fontSize:12,fontWeight:700,color:T.t}}>{c.name} <span style={{color:T.ts,fontWeight:400}}>({c.age})</span></div>
+                              <div style={{fontSize:10,color:T.ts,marginTop:2}}>{c.personality}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 9컷 스토리보드 */}
+                    <div style={{fontSize:10,color:T.ts,fontFamily:T.m,fontWeight:600,marginBottom:6}}>🎬 9컷 스토리보드</div>
+                    {(r.cuts||[]).map((c,i)=>(
+                      <div key={i} style={{background:T.c,borderRadius:8,padding:10,marginBottom:5,borderLeft:`3px solid ${T.ro}50`}}>
+                        <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
+                          <span style={{fontSize:10,fontWeight:800,color:T.ro,fontFamily:T.m,flexShrink:0,marginTop:1}}>Cut {c.cut}</span>
+                          <div style={{flex:1}}>
+                            <div style={{fontSize:11,color:T.t,lineHeight:1.5}}>{c.scene}</div>
+                            {c.dialogue&&<div style={{fontSize:11,color:T.cy,fontStyle:"italic",marginTop:3}}>"{c.dialogue}"</div>}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* 편집 가이드 */}
+                    {r.editing_guide&&(
+                      <div style={{background:T.c,borderRadius:10,padding:12,marginBottom:10}}>
+                        <div style={{fontSize:10,color:T.ts,fontFamily:T.m,fontWeight:600,marginBottom:8}}>🛠️ 제작 가이드</div>
+                        <div style={{display:"flex",flexDirection:"column",gap:5}}>
+                          {r.editing_guide.vrew&&<div style={{fontSize:11}}><span style={{color:"#818cf8",fontWeight:700}}>Vrew:</span> {r.editing_guide.vrew}</div>}
+                          {r.editing_guide.capcut&&<div style={{fontSize:11}}><span style={{color:"#00d4aa",fontWeight:700}}>CapCut:</span> {r.editing_guide.capcut}</div>}
+                          {r.editing_guide.subtitle_style&&<div style={{fontSize:11}}><span style={{color:T.am,fontWeight:700}}>자막:</span> {r.editing_guide.subtitle_style}</div>}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 제작 도구별 복사 버튼 */}
+                    <div style={{marginTop:14}}>
+                      <div style={{fontSize:11,fontWeight:700,color:T.t,marginBottom:8}}>📋 도구별 복사</div>
+                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+                        <button onClick={()=>navigator.clipboard.writeText(fullScript).then(()=>alert("✅ 전체 대본이 복사됐어요!
+Gems에 붙여넣기 하세요."))}
+                          style={{padding:"9px",borderRadius:8,background:"#4285f410",border:"1px solid #4285f440",color:"#4285f4",fontSize:11,fontWeight:700,cursor:"pointer"}}>
+                          💎 Gems용 복사
+                        </button>
+                        <button onClick={()=>navigator.clipboard.writeText(imagePrompts).then(()=>alert("✅ 이미지 프롬프트 복사!
+Imagen/Midjourney에 붙여넣기 하세요."))}
+                          style={{padding:"9px",borderRadius:8,background:"#ff660010",border:"1px solid #ff660040",color:"#ff8800",fontSize:11,fontWeight:700,cursor:"pointer"}}>
+                          🖼️ 이미지 프롬프트
+                        </button>
+                        <button onClick={()=>navigator.clipboard.writeText(videoPrompts).then(()=>alert("✅ 영상 프롬프트 복사!
+Veo/Runway에 붙여넣기 하세요."))}
+                          style={{padding:"9px",borderRadius:8,background:"#00d4aa10",border:"1px solid #00d4aa40",color:"#00d4aa",fontSize:11,fontWeight:700,cursor:"pointer"}}>
+                          🎬 Veo/Runway용
+                        </button>
+                        <button onClick={()=>navigator.clipboard.writeText(fullScript).then(()=>alert("✅ 대본 복사!
+Vrew에 붙여넣기 하세요."))}
+                          style={{padding:"9px",borderRadius:8,background:"#5b5bd610",border:"1px solid #5b5bd640",color:"#818cf8",fontSize:11,fontWeight:700,cursor:"pointer"}}>
+                          ✂️ Vrew용 복사
+                        </button>
+                      </div>
+
+                      {/* 도구 바로가기 */}
+                      <div style={{marginTop:8,display:"flex",gap:5,flexWrap:"wrap"}}>
+                        {[
+                          {label:"Gemini Gems",url:"https://gemini.google.com/gems",color:"#4285f4"},
+                          {label:"Vrew",url:"https://vrew.ai",color:"#818cf8"},
+                          {label:"CapCut",url:"https://capcut.com",color:"#00d4aa"},
+                          {label:"YouTube Studio",url:"https://studio.youtube.com",color:"#ff4444"},
+                        ].map(t=>(
+                          <a key={t.label} href={t.url} target="_blank" rel="noreferrer"
+                            style={{padding:"5px 10px",borderRadius:6,fontSize:10,fontWeight:700,textDecoration:"none",background:`${t.color}10`,border:`1px solid ${t.color}30`,color:t.color}}>
+                            {t.label} →
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Header ── */}
       <header style={{padding:"14px 20px",borderBottom:`1px solid ${T.b}`,background:`${T.s}ee`,backdropFilter:"blur(12px)",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100}}>
@@ -709,9 +950,10 @@ export default function TrendRadarV5() {
                 <div key={i} style={{background:T.c,border:`1px solid ${T.b}`,borderRadius:10,padding:14,marginBottom:8}}>
                   <div style={{fontSize:14,fontWeight:800,marginBottom:8}}>{v.title}</div>
                   <div style={{display:"flex",gap:5,marginBottom:12}}><Pill>{v.format}</Pill><Pill color={T.g}>예상 {v.views}</Pill></div>
-                  <div style={{display:"flex",gap:8}}>
-                    <button onClick={e=>{e.stopPropagation();addPipe(sel,v);}} style={{flex:1,padding:"9px",borderRadius:8,background:T.acd,border:`1px solid ${T.acb}`,color:T.ac,fontSize:12,fontWeight:700,cursor:"pointer"}}>📋 파이프라인</button>
-                    <button onClick={e=>{e.stopPropagation();genScript(v);}} style={{flex:1,padding:"9px",borderRadius:8,background:T.gd,border:`1px solid ${T.gb}`,color:T.g,fontSize:12,fontWeight:700,cursor:"pointer"}}>✍️ 대본 생성</button>
+                  <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                    <button onClick={e=>{e.stopPropagation();addPipe(sel,v);}} style={{flex:1,padding:"8px",borderRadius:8,background:T.acd,border:`1px solid ${T.acb}`,color:T.ac,fontSize:11,fontWeight:700,cursor:"pointer"}}>📋 파이프라인</button>
+                    <button onClick={e=>{e.stopPropagation();genScript(v);}} style={{flex:1,padding:"8px",borderRadius:8,background:T.gd,border:`1px solid ${T.gb}`,color:T.g,fontSize:11,fontWeight:700,cursor:"pointer"}}>✍️ 대본 생성</button>
+                    <button onClick={e=>{e.stopPropagation();genDramaPrompt(v);}} style={{flex:1,padding:"8px",borderRadius:8,background:`${T.ro}15`,border:`1px solid ${T.ro}40`,color:T.ro,fontSize:11,fontWeight:700,cursor:"pointer"}}>🎬 드라마 프롬프트</button>
                   </div>
                 </div>
               ))}
@@ -774,75 +1016,188 @@ export default function TrendRadarV5() {
               ))}
               {script.desc&&<div style={{background:T.c,borderRadius:9,padding:12,marginTop:10}}><div style={{fontSize:10,color:T.tm,fontFamily:T.m,fontWeight:600,marginBottom:4}}>📝 영상 설명문</div><div style={{fontSize:12,lineHeight:1.6,color:T.ts}}>{script.desc}</div></div>}
 
-              {/* ── 제작 도구 연결 ── */}
-              <div style={{marginTop:16,background:`${T.am}08`,border:`1px solid ${T.amb}`,borderRadius:12,padding:14}}>
-                <div style={{fontSize:12,fontWeight:800,color:T.am,marginBottom:4}}>🎬 다음 단계 — 제작 도구로 이어가기</div>
-                <div style={{fontSize:11,color:T.ts,marginBottom:12,lineHeight:1.6}}>
-                  대본 초안이 완성됐어요! 아래 도구들로 영상 제작을 시작하세요.
-                </div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
-                  {/* Vrew */}
-                  <a href="https://vrew.ai" target="_blank" rel="noreferrer"
-                    style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",borderRadius:9,background:"#5b5bd610",border:"1px solid #5b5bd640",textDecoration:"none"}}>
-                    <span style={{fontSize:18}}>🎬</span>
-                    <div>
-                      <div style={{fontSize:12,fontWeight:700,color:"#818cf8"}}>Vrew</div>
-                      <div style={{fontSize:10,color:T.ts}}>AI 영상편집 + 자막</div>
+              {/* ── 범용 프롬프트 생성기 & 제작 도구 연결 ── */}
+              {(()=>{
+                // 공통 대본 텍스트 생성 함수
+                const makeScriptText = () => [
+                  `영상 주제: ${sel?.title||""}`,
+                  `채널 앵글: ${analysis?.angle||""}`,
+                  ``,
+                  `[오프닝 후킹 - 15초]`,
+                  `"${script.hook||""}"`,
+                  ``,
+                  `[영상 구성]`,
+                  ...(script.sections||[]).map(s=>`${s.ts} ${s.name}: ${s.desc}`),
+                  ``,
+                  `[영상 설명문]`,
+                  script.desc||"",
+                  ``,
+                  `[SEO 키워드]`,
+                  (script.seo||[]).join(", ")
+                ].join("
+");
+
+                // 도구별 프롬프트 생성
+                const prompts = {
+                  gems: `# 역할
+당신은 한국 직장인 20-40대를 위한 AI × 자기계발 유튜브 채널의 영상 제작 전문가입니다.
+
+# 작업 지시
+아래 대본 초안을 바탕으로 다음을 생성해주세요:
+1. PSA(공익광고) 스타일의 9컷 스토리보드
+2. 각 컷별 이미지 생성 프롬프트 (영어)
+3. 각 컷별 영상 생성 프롬프트 (Veo용)
+
+# 핵심 규칙
+- 밝고 따뜻한 톤 유지 (햇빛이 비치는 장면 선호)
+- 한국적 정서와 직장인 공감대 반영
+- 이미지 프롬프트: 텍스트/자막 지시 절대 금지
+- 영상 프롬프트: "Strictly NO background music. Clean voices and natural ambient SFX only."
+
+# 대본 초안
+${makeScriptText()}`,
+
+                  vrew: `# Vrew AI 영상 제작 지시
+
+아래 대본을 Vrew에서 영상으로 제작합니다.
+
+## 영상 기본 설정
+- 형식: 유튜브 롱폼 (16:9)
+- 톤: 밝고 따뜻한 한국 직장인 라이프스타일
+- 자막: 자동 생성 후 검토
+
+## 대본
+${makeScriptText()}
+
+## 제작 체크리스트
+□ 오프닝 후킹 영상 (0-15초)
+□ 각 섹션별 B-roll 영상
+□ 자막 스타일 통일
+□ BGM 추가 (저작권 무료)
+□ 엔딩 CTA 화면`,
+
+                  capcut: `# CapCut 편집 가이드
+
+## 영상 정보
+주제: ${sel?.title||""}
+타겟: 한국 직장인 20-40대
+
+## 편집 순서
+${(script.sections||[]).map((s,i)=>`${i+1}. [${s.ts}] ${s.name}
+   - ${s.desc}
+   - 추천 효과: 자연스러운 컷 편집`).join("
+")}
+
+## 썸네일 키워드
+${(script.seo||[]).join(" | ")}
+
+## CapCut 추천 설정
+- 화면비: 16:9
+- 색감: 따뜻한 톤 (노출 +5, 채도 +10)
+- 자막: 굵은 흰색 + 검정 테두리`,
+
+                  imagen: `# Gemini Imagen 캐릭터 레퍼런스 생성
+
+## 주인공 설정
+채널: AI × 자기계발 (한국 직장인 대상)
+영상 주제: ${sel?.title||""}
+
+## 이미지 생성 프롬프트
+A professional Korean office worker in their 30s, wearing smart casual business attire, neutral calm expression, in a bright modern Korean office with warm sunlight streaming in. Hyper-realistic, 8K ultra-high resolution, cinematic film grain, zero AI plasticky texture. --ar 16:9
+
+## 6패널 레이아웃 요청
+위 이미지를 기반으로 6패널 캐릭터 레퍼런스 시트를 생성해주세요:
+- 상단: 정면/45도 클로즈업
+- 중간: 전신 앞/뒤 (세로 패널)
+- 하단: 90도 측면/반대 45도`
+                };
+
+                const [activePT, setActivePT] = React.useState(null);
+                const [copied, setCopied] = React.useState(false);
+
+                const copyPrompt = (type) => {
+                  navigator.clipboard.writeText(prompts[type]).then(()=>{
+                    setCopied(type);
+                    setTimeout(()=>setCopied(false), 2000);
+                  });
+                };
+
+                const TOOLS = [
+                  {id:"gems", icon:"💎", name:"Gemini Gems", desc:"9컷 스토리보드 + 이미지/영상 프롬프트", color:"#4285f4", url:"https://gemini.google.com/gems"},
+                  {id:"vrew", icon:"🎬", name:"Vrew", desc:"AI 영상편집 + 자막 자동생성", color:"#818cf8", url:"https://vrew.ai"},
+                  {id:"capcut", icon:"✂️", name:"CapCut", desc:"편집 가이드 + 효과 설정", color:"#00d4aa", url:"https://www.capcut.com"},
+                  {id:"imagen", icon:"🖼️", name:"Imagen/Veo", desc:"캐릭터 레퍼런스 + 영상생성", color:"#fb7185", url:"https://aitestkitchen.withgoogle.com"},
+                ];
+
+                return (
+                  <div style={{marginTop:16}}>
+                    {/* 헤더 */}
+                    <div style={{background:`${T.am}08`,border:`1px solid ${T.amb}`,borderRadius:12,padding:14,marginBottom:10}}>
+                      <div style={{fontSize:12,fontWeight:800,color:T.am,marginBottom:4}}>🚀 제작 도구 프롬프트 생성기</div>
+                      <div style={{fontSize:11,color:T.ts,lineHeight:1.6}}>
+                        도구를 선택하면 해당 도구에 최적화된 프롬프트가 자동 생성돼요.<br/>
+                        복사 후 원하는 도구에 붙여넣기하면 바로 사용 가능해요!
+                      </div>
                     </div>
-                    <span style={{marginLeft:"auto",color:"#818cf8",fontSize:11}}>→</span>
-                  </a>
-                  {/* Gemini Gems */}
-                  <a href="https://gemini.google.com/gems" target="_blank" rel="noreferrer"
-                    style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",borderRadius:9,background:"#4285f410",border:"1px solid #4285f440",textDecoration:"none"}}>
-                    <span style={{fontSize:18}}>💎</span>
-                    <div>
-                      <div style={{fontSize:12,fontWeight:700,color:"#4285f4"}}>Gemini Gems</div>
-                      <div style={{fontSize:10,color:T.ts}}>대본 다듬기 + 이미지</div>
+
+                    {/* 도구 선택 버튼 */}
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:10}}>
+                      {TOOLS.map(tool=>(
+                        <button key={tool.id} onClick={()=>setActivePT(activePT===tool.id?null:tool.id)}
+                          style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",borderRadius:9,
+                            background:activePT===tool.id?`${tool.color}20`:`${tool.color}08`,
+                            border:`1px solid ${activePT===tool.id?tool.color:tool.color+"30"}`,
+                            cursor:"pointer",transition:"all .2s",textAlign:"left"}}>
+                          <span style={{fontSize:18,flexShrink:0}}>{tool.icon}</span>
+                          <div style={{flex:1,minWidth:0}}>
+                            <div style={{fontSize:12,fontWeight:700,color:tool.color}}>{tool.name}</div>
+                            <div style={{fontSize:10,color:T.ts,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{tool.desc}</div>
+                          </div>
+                          <span style={{color:tool.color,fontSize:11,flexShrink:0}}>{activePT===tool.id?"▼":"→"}</span>
+                        </button>
+                      ))}
                     </div>
-                    <span style={{marginLeft:"auto",color:"#4285f4",fontSize:11}}>→</span>
-                  </a>
-                  {/* CapCut */}
-                  <a href="https://www.capcut.com" target="_blank" rel="noreferrer"
-                    style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",borderRadius:9,background:"#00d4aa10",border:"1px solid #00d4aa40",textDecoration:"none"}}>
-                    <span style={{fontSize:18}}>✂️</span>
-                    <div>
-                      <div style={{fontSize:12,fontWeight:700,color:"#00d4aa"}}>CapCut</div>
-                      <div style={{fontSize:10,color:T.ts}}>편집 + 효과 + 자막</div>
-                    </div>
-                    <span style={{marginLeft:"auto",color:"#00d4aa",fontSize:11}}>→</span>
-                  </a>
-                  {/* YouTube Studio */}
-                  <a href="https://studio.youtube.com" target="_blank" rel="noreferrer"
-                    style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",borderRadius:9,background:"#ff000010",border:"1px solid #ff000040",textDecoration:"none"}}>
-                    <span style={{fontSize:18}}>📺</span>
-                    <div>
-                      <div style={{fontSize:12,fontWeight:700,color:"#ff4444"}}>YouTube Studio</div>
-                      <div style={{fontSize:10,color:T.ts}}>업로드 + 관리</div>
-                    </div>
-                    <span style={{marginLeft:"auto",color:"#ff4444",fontSize:11}}>→</span>
-                  </a>
-                </div>
-                {/* 대본 복사 버튼 */}
-                <button onClick={()=>{
-                  const scriptText = [
-                    `📌 영상 제목: ${sel?.title||""}`,
-                    ``,
-                    `🎯 오프닝 후킹 (15초):`,
-                    `"${script.hook||""}"`,
-                    ``,
-                    ...(script.sections||[]).map(s=>`[${s.ts}] ${s.name}
-${s.desc}`),
-                    ``,
-                    `📝 영상 설명문:`,
-                    script.desc||""
-                  ].join('
-');
-                  navigator.clipboard.writeText(scriptText).then(()=>alert('✅ 대본이 클립보드에 복사됐어요!
-Vrew나 Gems에 붙여넣기 하세요.'));
-                }} style={{width:"100%",padding:"10px",borderRadius:9,background:T.gd,border:`1px solid ${T.gb}`,color:T.g,fontSize:12,fontWeight:700,cursor:"pointer"}}>
-                  📋 대본 전체 복사 (Vrew/Gems에 붙여넣기용)
-                </button>
-              </div>
+
+                    {/* 프롬프트 미리보기 + 복사 */}
+                    {activePT&&(()=>{
+                      const tool = TOOLS.find(t=>t.id===activePT);
+                      return (
+                        <div style={{background:T.c,border:`1px solid ${tool.color}30`,borderRadius:10,padding:12,marginBottom:8}}>
+                          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                            <div style={{fontSize:11,fontWeight:700,color:tool.color}}>{tool.icon} {tool.name} 프롬프트</div>
+                            <a href={tool.url} target="_blank" rel="noreferrer"
+                              style={{fontSize:10,color:tool.color,textDecoration:"none",background:`${tool.color}10`,padding:"3px 8px",borderRadius:5,border:`1px solid ${tool.color}30`}}>
+                              도구 열기 →
+                            </a>
+                          </div>
+                          <div style={{background:T.s2,borderRadius:7,padding:10,maxHeight:160,overflowY:"auto",marginBottom:8}}>
+                            <pre style={{fontSize:10,color:T.ts,lineHeight:1.6,margin:0,whiteSpace:"pre-wrap",fontFamily:T.m}}>{prompts[activePT]}</pre>
+                          </div>
+                          <button onClick={()=>copyPrompt(activePT)}
+                            style={{width:"100%",padding:"9px",borderRadius:8,
+                              background:copied===activePT?T.gd:`${tool.color}15`,
+                              border:`1px solid ${copied===activePT?T.gb:tool.color+"40"}`,
+                              color:copied===activePT?T.g:tool.color,
+                              fontSize:12,fontWeight:700,cursor:"pointer",transition:"all .2s"}}>
+                            {copied===activePT?"✅ 복사됨! 도구에 붙여넣기 하세요":"📋 프롬프트 복사"}
+                          </button>
+                        </div>
+                      );
+                    })()}
+
+                    {/* YouTube Studio 바로가기 */}
+                    <a href="https://studio.youtube.com" target="_blank" rel="noreferrer"
+                      style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",borderRadius:9,background:"#ff000008",border:"1px solid #ff000030",textDecoration:"none"}}>
+                      <span style={{fontSize:16}}>📺</span>
+                      <div>
+                        <div style={{fontSize:12,fontWeight:700,color:"#ff4444"}}>YouTube Studio</div>
+                        <div style={{fontSize:10,color:T.ts}}>완성된 영상 업로드 + 채널 관리</div>
+                      </div>
+                      <span style={{marginLeft:"auto",color:"#ff4444",fontSize:11}}>→</span>
+                    </a>
+                  </div>
+                );
+              })()}
             </div>}
           </div>
         )}
