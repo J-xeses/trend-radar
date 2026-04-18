@@ -25,6 +25,8 @@ const SRC = {
   naver:       { l:"네이버뉴스",    i:"N", c:"#03c75a", b:"#03c75a20" },
   producthunt: { l:"ProductHunt",  i:"P", c:"#da552f", b:"#da552f20" },
   github:      { l:"GitHub",       i:"G", c:"#a78bfa", b:"#a78bfa20" },
+  youtube_kr:  { l:"유튜브 급상승", i:"▶", c:"#ff0000", b:"#ff000020" },
+  youtube_ch:  { l:"유튜브 채널",   i:"📺", c:"#ff4444", b:"#ff444420" },
 };
 
 const CATS = [
@@ -62,11 +64,11 @@ function timeAgo(ts) {
 }
 function classify(title) {
   const t = title.toLowerCase();
-  if (/\bai\b|artificial|llm|gpt|claude|gemini|openai|anthropic|machine learning|neural|transformer|diffusion|agent|챗봇|인공지능|딥러닝/.test(t)) return "ai";
-  if (/startup|founder|funding|vc|스타트업|투자|유니콘/.test(t)) return "biz";
-  if (/career|job|hire|salary|이직|채용|연봉|퇴사|취업/.test(t)) return "career";
-  if (/건강|운동|다이어트|루틴|습관|명상|수면|여행|맛집/.test(t)) return "life";
-  if (/product|app|tool|saas|launch|ship/.test(t)) return "product";
+  if (/\bai\b|artificial|llm|gpt|claude|gemini|openai|anthropic|machine learning|neural|transformer|diffusion|agent|챗봇|인공지능|딥러닝|자동화|노코드/.test(t)) return "ai";
+  if (/startup|founder|funding|vc|스타트업|투자|유니콘|부업|수익|월급|돈버는|재테크/.test(t)) return "biz";
+  if (/career|job|hire|salary|이직|채용|연봉|퇴사|취업|직장인|회사|업무|생산성|효율/.test(t)) return "career";
+  if (/건강|운동|다이어트|루틴|습관|명상|수면|여행|맛집|자기계발|성장|독서/.test(t)) return "life";
+  if (/product|app|tool|saas|launch|ship|앱|툴|서비스/.test(t)) return "product";
   return "tech";
 }
 function scoreItem(item) {
@@ -78,6 +80,8 @@ function scoreItem(item) {
   else if (item.source?.startsWith("google_")) eng = Math.min(100, item.traffic?item.traffic/5000*100:60);
   else if (item.source==="producthunt") eng = Math.min(100,(item.score||50)/3);
   else if (item.source==="github") eng = Math.min(100,(item.score||0)/10+50);
+  else if (item.source==="youtube_kr") eng = Math.min(100,(item.score||60)+10); // 급상승 보정
+  else if (item.source==="youtube_ch") eng = Math.min(100,(item.score||65));
   return Math.max(5, Math.min(100, Math.round(eng*0.6+rec*0.4)));
 }
 function heatOf(s, a) {
@@ -180,6 +184,89 @@ async function fetchGH() {
     });
     return r;
   } catch { return []; }
+}
+
+/* ─── YouTube Fetchers ─── */
+
+// 방법2: 유튜브 급상승 트렌딩 (한국) — RSS/Trending 페이지 파싱
+async function fetchYTTrending() {
+  try {
+    // 유튜브 트렌딩 RSS (공개 엔드포인트)
+    const urls = [
+      "https://www.youtube.com/feeds/videos.xml?chart=0&gl=KR&hl=ko", // 급상승 KR
+    ];
+    const res = await fetch(urls[0]);
+    const text = await res.text();
+    const xml = new DOMParser().parseFromString(text,"text/xml");
+    const entries = xml.querySelectorAll("entry");
+    const r = [];
+    entries.forEach((entry,i)=>{
+      if (i>=15) return;
+      const title = entry.querySelector("title")?.textContent||"";
+      const videoId = entry.querySelector("videoId")?.textContent||
+                      entry.querySelector("id")?.textContent?.split(":").pop()||"";
+      const published = entry.querySelector("published")?.textContent||"";
+      const viewCount = parseInt(entry.querySelector("statistics")?.getAttribute("views")||"0")||0;
+      const url = videoId ? `https://www.youtube.com/watch?v=${videoId}` : "https://www.youtube.com";
+      r.push({
+        id:`ytk-${i}-${Date.now()}`,
+        title,
+        url,
+        score: Math.min(100, Math.round(viewCount/10000))||60,
+        comments:0,
+        source:"youtube_kr",
+        time: published ? new Date(published).getTime() : Date.now()-i*3600000,
+        tagline:"🇰🇷 유튜브 급상승"
+      });
+    });
+    return r.filter(v=>v.title);
+  } catch { return []; }
+}
+
+// 방법1: 한국 유튜브 채널 RSS 피드 수집 (채널명 RSS에서 자동 추출)
+async function fetchYTChannels() {
+  const channelIds = [
+    "UCYM3qUEffEx-u48OG-6BRbg",
+    "UCtfGLmp6xMwvPoYpI-A5Kdg",
+    "UCqZrIjDRZimf_QkuAkNw4DA",
+    "UCQ2DWm5Md16Dc3xRwwhVE7Q",
+    "UCriq8I8GEESkQq0svX19oCw",
+    "UCwwEoblY3HEXs8bs3hoOn0A",
+    "UCz-NbRVGyEmU1CLxPEhgxmA",
+    "UCNHhTJTUoHa_LZwl3Js-8pQ",
+  ];
+  const results = [];
+  await Promise.all(channelIds.map(async(cid)=>{
+    try {
+      const res = await fetch(`https://www.youtube.com/feeds/videos.xml?channel_id=${cid}`);
+      const text = await res.text();
+      const xml = new DOMParser().parseFromString(text,"text/xml");
+      // 채널 이름 RSS에서 자동 추출
+      const chName = xml.querySelector("author name")?.textContent ||
+                     xml.querySelector("feed > title")?.textContent ||
+                     `채널(${cid.slice(2,8)})`;
+      const entries = xml.querySelectorAll("entry");
+      entries.forEach((entry,i)=>{
+        if (i>=3) return;
+        const title = entry.querySelector("title")?.textContent||"";
+        const videoId = entry.querySelector("videoId")?.textContent||"";
+        const published = entry.querySelector("published")?.textContent||"";
+        const viewCount = parseInt(entry.querySelector("statistics")?.getAttribute("views")||"0")||0;
+        if (!title) return;
+        results.push({
+          id:`ytch-${cid.slice(2,8)}-${i}-${Date.now()}`,
+          title:`[${chName}] ${title}`,
+          url: videoId?`https://www.youtube.com/watch?v=${videoId}`:`https://www.youtube.com/channel/${cid}`,
+          score: Math.min(95, 60+Math.min(35,Math.round(viewCount/50000))),
+          comments:0,
+          source:"youtube_ch",
+          time: published?new Date(published).getTime():Date.now()-i*7200000,
+          tagline:`📺 ${chName}`
+        });
+      });
+    } catch {}
+  }));
+  return results;
 }
 
 /* ─── UI Components ─── */
@@ -327,7 +414,7 @@ export default function TrendRadarV5() {
     if(showL) setLoading(true);
     const st={};
     const mk=(k,r)=>{st[k]={ok:r.length>0,n:r.length};};
-    const [hn,rd,gKR,gUS,gGL,nv,ph,gh] = await Promise.all([
+    const [hn,rd,gKR,gUS,gGL,nv,ph,gh,ytKR,ytCH] = await Promise.all([
       fetchHN().then(r=>{mk("hackernews",r);return r;}),
       fetchRD().then(r=>{mk("reddit",r);return r;}),
       fetchGT("KR","google_kr").then(r=>{mk("google_kr",r);return r;}),
@@ -336,8 +423,10 @@ export default function TrendRadarV5() {
       fetchNaver().then(r=>{mk("naver",r);return r;}),
       fetchPH().then(r=>{mk("producthunt",r);return r;}),
       fetchGH().then(r=>{mk("github",r);return r;}),
+      fetchYTTrending().then(r=>{mk("youtube_kr",r);return r;}),
+      fetchYTChannels().then(r=>{mk("youtube_ch",r);return r;}),
     ]);
-    const all=[...hn,...rd,...gKR,...gUS,...gGL,...nv,...ph,...gh];
+    const all=[...hn,...rd,...gKR,...gUS,...gGL,...nv,...ph,...gh,...ytKR,...ytCH];
     const scored=all.map(item=>{
       const age=(Date.now()-item.time)/3600000;
       const ts2=scoreItem(item);
@@ -372,6 +461,7 @@ export default function TrendRadarV5() {
     exp:trends.filter(t2=>t2.heat==="explosive").length,
     rise:trends.filter(t2=>t2.heat==="rising").length,
     src:Object.keys(fStatus).filter(k=>fStatus[k]?.ok).length,
+    ytOk:!!(fStatus.youtube_kr?.ok||fStatus.youtube_ch?.ok),
   };
 
   /* ── AI 분석 — 서버 API 경유 ── */
@@ -771,7 +861,7 @@ Vrew에 붙여넣기 하세요."))}
               </span>
             </div>
             <div style={{fontSize:11,color:T.ts,fontFamily:T.m,marginTop:1}}>
-              {lastRefresh?`갱신 ${lastRefresh.toLocaleTimeString("ko-KR")} · ${stats.total}개 · ${stats.src}/8 소스`:"데이터 수집중..."}
+              {lastRefresh?`갱신 ${lastRefresh.toLocaleTimeString("ko-KR")} · ${stats.total}개 · ${stats.src}/10 소스`:"데이터 수집중..."}
             </div>
           </div>
         </div>
@@ -817,7 +907,7 @@ Vrew에 붙여넣기 하세요."))}
       </div>
 
       {/* ── Source Status ── */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(8,1fr)",borderBottom:`1px solid ${T.b}`,background:T.s2}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(10,1fr)",borderBottom:`1px solid ${T.b}`,background:T.s2}}>
         {Object.entries(SRC).map(([k,v])=>{
           const st2=fStatus[k];
           return(
@@ -833,7 +923,7 @@ Vrew에 붙여넣기 하세요."))}
 
       {/* ── Stats Bar ── */}
       <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",borderBottom:`1px solid ${T.b}`}}>
-        {[{l:"전체 수집",v:stats.total,c:T.t},{l:"🔥 폭발",v:stats.exp,c:T.r},{l:"📈 상승",v:stats.rise,c:T.am},{l:"활성 소스",v:`${stats.src}/8`,c:T.ac}].map((s2,i)=>(
+        {[{l:"전체 수집",v:stats.total,c:T.t},{l:"🔥 폭발",v:stats.exp,c:T.r},{l:"📈 상승",v:stats.rise,c:T.am},{l:"활성 소스",v:`${stats.src}/10`,c:T.ac}].map((s2,i)=>(
           <div key={i} style={{padding:"14px 10px",textAlign:"center",borderRight:i<3?`1px solid ${T.b}`:"none"}}>
             <div style={{fontSize:10,color:T.ts,fontFamily:T.m,fontWeight:600}}>{s2.l}</div>
             <div style={{fontSize:28,fontWeight:900,color:s2.c,fontFamily:T.m,lineHeight:1.1,marginTop:4}}>{s2.v}</div>
