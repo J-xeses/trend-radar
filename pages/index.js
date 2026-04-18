@@ -798,23 +798,19 @@ export default function TrendRadarV5() {
                     <div style={{marginTop:14}}>
                       <div style={{fontSize:11,fontWeight:700,color:T.t,marginBottom:8}}>📋 도구별 복사</div>
                       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
-                        <button onClick={()=>navigator.clipboard.writeText(fullScript).then(()=>alert("✅ 전체 대본이 복사됐어요!
-Gems에 붙여넣기 하세요."))}
+                        <button onClick={()=>navigator.clipboard.writeText(fullScript).then(()=>alert("✅ 복사 완료! Gems에 붙여넣기 하세요."))}
                           style={{padding:"9px",borderRadius:8,background:"#4285f410",border:"1px solid #4285f440",color:"#4285f4",fontSize:11,fontWeight:700,cursor:"pointer"}}>
                           💎 Gems용 복사
                         </button>
-                        <button onClick={()=>navigator.clipboard.writeText(imagePrompts).then(()=>alert("✅ 이미지 프롬프트 복사!
-Imagen/Midjourney에 붙여넣기 하세요."))}
+                        <button onClick={()=>navigator.clipboard.writeText(imagePrompts).then(()=>alert("✅ 복사 완료! Imagen/Midjourney에 붙여넣기 하세요."))}
                           style={{padding:"9px",borderRadius:8,background:"#ff660010",border:"1px solid #ff660040",color:"#ff8800",fontSize:11,fontWeight:700,cursor:"pointer"}}>
                           🖼️ 이미지 프롬프트
                         </button>
-                        <button onClick={()=>navigator.clipboard.writeText(videoPrompts).then(()=>alert("✅ 영상 프롬프트 복사!
-Veo/Runway에 붙여넣기 하세요."))}
+                        <button onClick={()=>navigator.clipboard.writeText(videoPrompts).then(()=>alert("✅ 복사 완료! Veo/Runway에 붙여넣기 하세요."))}
                           style={{padding:"9px",borderRadius:8,background:"#00d4aa10",border:"1px solid #00d4aa40",color:"#00d4aa",fontSize:11,fontWeight:700,cursor:"pointer"}}>
                           🎬 Veo/Runway용
                         </button>
-                        <button onClick={()=>navigator.clipboard.writeText(fullScript).then(()=>alert("✅ 대본 복사!
-Vrew에 붙여넣기 하세요."))}
+                        <button onClick={()=>navigator.clipboard.writeText(fullScript).then(()=>alert("✅ 복사 완료! Vrew에 붙여넣기 하세요."))}
                           style={{padding:"9px",borderRadius:8,background:"#5b5bd610",border:"1px solid #5b5bd640",color:"#818cf8",fontSize:11,fontWeight:700,cursor:"pointer"}}>
                           ✂️ Vrew용 복사
                         </button>
