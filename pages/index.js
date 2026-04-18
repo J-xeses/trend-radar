@@ -712,10 +712,8 @@ export default function TrendRadarV5() {
                 const r = dramaResult;
 
                 // 이미지 프롬프트 모아서 텍스트 생성
-                const imagePrompts = (r.cuts||[]).map((c,i)=>`Cut ${c.cut||i+1}: ${c.image_prompt||""}`).join('
-');
-                const videoPrompts = (r.cuts||[]).map((c,i)=>`Cut ${c.cut||i+1}: ${c.video_prompt||""}`).join('
-');
+                const imagePrompts = (r.cuts||[]).map((c,i)=>`Cut ${c.cut||i+1}: ${c.image_prompt||""}`).join("\n");
+                const videoPrompts = (r.cuts||[]).map((c,i)=>`Cut ${c.cut||i+1}: ${c.video_prompt||""}`).join("\n");
                 const fullScript = [
                   `🎬 ${dramaVideo?.title||""}`,
                   `📖 로그라인: ${r.logline||""}`,
@@ -725,10 +723,8 @@ export default function TrendRadarV5() {
                   ...(r.characters||[]).map(c=>`• ${c.name} (${c.age}) — ${c.personality}`),
                   ``,
                   `=== 9컷 스토리보드 ===`,
-                  ...(r.cuts||[]).map(c=>`[Cut ${c.cut}] ${c.scene}
-${c.dialogue?"대사: "+c.dialogue:""}`),
-                ].join('
-');
+                  ...(r.cuts||[]).map(c=>`[Cut ${c.cut}] ${c.scene}\n${c.dialogue?"대사: "+c.dialogue:""}`),
+                ].join("\n");
 
                 return (
                   <div>
