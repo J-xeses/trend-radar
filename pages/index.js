@@ -1,19 +1,28 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Head from "next/head";
 
-/* ─── Design Tokens ─── */
+/* ─── Design Tokens v2 ─── */
 const T = {
-  bg:"#070710", s:"#0e0e1a", s2:"#12121f", c:"#181828", ch:"#1e1e30",
-  ca:"#22223a", b:"#ffffff0a", ba:"#ffffff18", bg2:"#ffffff28",
-  ac:"#818cf8", acd:"#818cf812", acb:"#818cf830",
-  g:"#34d399", gd:"#34d39912", gb:"#34d39930",
-  am:"#fbbf24", amd:"#fbbf2412", amb:"#fbbf2430",
-  r:"#f87171", rd:"#f8717112", rb:"#f8717130",
-  cy:"#22d3ee", cyd:"#22d3ee12", cyb:"#22d3ee30",
-  ro:"#fb7185", rod:"#fb718512",
-  t:"#eeeef8", ts:"#8888aa", tm:"#55557a",
-  m:"'JetBrains Mono','SF Mono',monospace",
-  f:"'Inter',-apple-system,sans-serif"
+  // 배경 계층 (더 깊고 풍부한 다크)
+  bg:"#050508", s:"#0a0a12", s2:"#0f0f1a", c:"#141420", ch:"#1a1a28",
+  ca:"#1e1e2e", b:"#ffffff08", ba:"#ffffff14", bg2:"#ffffff22",
+  // 메인 액센트 - 더 선명하고 고급스러운 인디고/바이올렛
+  ac:"#7c6ff7", acd:"#7c6ff710", acb:"#7c6ff728",
+  // 성공 - 에메랄드
+  g:"#10d9a0", gd:"#10d9a010", gb:"#10d9a028",
+  // 경고 - 앰버
+  am:"#f59e0b", amd:"#f59e0b10", amb:"#f59e0b28",
+  // 위험 - 로즈
+  r:"#fb4f67", rd:"#fb4f6710", rb:"#fb4f6728",
+  // 정보 - 스카이
+  cy:"#0ea5e9", cyd:"#0ea5e910", cyb:"#0ea5e928",
+  // 핑크-오렌지
+  ro:"#f97316", rod:"#f9731610",
+  // 텍스트 계층
+  t:"#f0f0fc", ts:"#8080a8", tm:"#4a4a6a",
+  // 폰트 - 더 특색있는 조합
+  m:"'IBM Plex Mono','Fira Code',monospace",
+  f:"'Pretendard','Noto Sans KR',-apple-system,sans-serif"
 };
 
 const SRC = {
@@ -270,7 +279,9 @@ async function fetchYTChannels() {
 
 /* ─── UI Components ─── */
 const Pill = ({ children, color=T.ts, bg }) => (
-  <span style={{ fontSize:11,fontWeight:700,letterSpacing:".03em",padding:"3px 8px",borderRadius:5,background:bg||`${color}18`,color,fontFamily:T.m,whiteSpace:"nowrap" }}>
+  <span style={{ fontSize:9,fontWeight:700,letterSpacing:".04em",padding:"2px 8px",borderRadius:20,
+    background:bg||`${color}15`,color,fontFamily:T.m,whiteSpace:"nowrap",
+    border:`1px solid ${color}25`}}>
     {children}
   </span>
 );
@@ -278,16 +289,23 @@ const Pill = ({ children, color=T.ts, bg }) => (
 const ScoreBadge = ({ score }) => {
   const color = score>=80?T.r:score>=60?T.am:T.g;
   return (
-    <div style={{ width:52,height:52,borderRadius:12,background:`${color}15`,border:`2px solid ${color}40`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flexShrink:0 }}>
-      <div style={{ fontSize:20,fontWeight:900,color,fontFamily:T.m,lineHeight:1 }}>{score}</div>
-      <div style={{ fontSize:8,color:`${color}80`,fontFamily:T.m,marginTop:1 }}>점수</div>
+    <div style={{ width:48,height:48,borderRadius:12,
+      background:`linear-gradient(135deg,${color}18,${color}08)`,
+      border:`1px solid ${color}35`,
+      display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+      flexShrink:0,boxShadow:`0 0 12px ${color}15`}}>
+      <div style={{ fontSize:18,fontWeight:900,color,fontFamily:T.m,lineHeight:1,letterSpacing:"-0.04em" }}>{score}</div>
+      <div style={{ fontSize:7,color:`${color}70`,fontFamily:T.m,marginTop:1,letterSpacing:"0.06em",fontWeight:600 }}>SCORE</div>
     </div>
   );
 };
 
 const Bar = ({ pct, color=T.ac }) => (
-  <div style={{ width:"100%",height:3,background:`${color}15`,borderRadius:3,overflow:"hidden" }}>
-    <div style={{ width:`${Math.min(pct,100)}%`,height:"100%",background:color,borderRadius:3,transition:"width .8s cubic-bezier(.4,0,.2,1)" }} />
+  <div style={{ width:"100%",height:2,background:`${color}12`,borderRadius:2,overflow:"hidden" }}>
+    <div style={{ width:`${Math.min(pct,100)}%`,height:"100%",
+      background:`linear-gradient(90deg,${color}80,${color})`,
+      borderRadius:2,transition:"width .9s cubic-bezier(.4,0,.2,1)",
+      boxShadow:`0 0 6px ${color}40`}} />
   </div>
 );
 
@@ -625,15 +643,37 @@ export default function TrendRadarV5() {
     </Head>
     <div style={{minHeight:"100vh",background:T.bg,color:T.t,fontFamily:T.f}}>
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&display=swap');
+
         @keyframes spin{to{transform:rotate(360deg)}}
-        @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-        @keyframes liveDot{0%,100%{box-shadow:0 0 0 0 ${T.g}60}50%{box-shadow:0 0 0 7px ${T.g}00}}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+        @keyframes liveDot{0%,100%{box-shadow:0 0 0 0 ${T.g}70}50%{box-shadow:0 0 0 8px ${T.g}00}}
+        @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+        @keyframes slideIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
+        @keyframes glow{0%,100%{box-shadow:0 0 20px ${T.ac}20}50%{box-shadow:0 0 35px ${T.ac}40}}
+
         *{box-sizing:border-box;margin:0;scrollbar-width:thin;scrollbar-color:${T.ba} transparent}
-        input:focus,button:focus{outline:none}
-        body{margin:0;background:${T.bg}}
-        button:hover{filter:brightness(1.1)}
+        ::-webkit-scrollbar{width:4px;height:4px}
+        ::-webkit-scrollbar-track{background:transparent}
+        ::-webkit-scrollbar-thumb{background:${T.ba};border-radius:4px}
+        ::-webkit-scrollbar-thumb:hover{background:${T.bg2}}
+
+        html{scroll-behavior:smooth}
+        body{margin:0;background:${T.bg};font-family:${T.f}}
+        input,textarea,select{font-family:${T.f}}
+        input:focus,button:focus,textarea:focus{outline:none}
+        button{cursor:pointer;font-family:${T.f};transition:all .18s cubic-bezier(.4,0,.2,1)}
+        button:hover{filter:brightness(1.12) saturate(1.1)}
+        button:active{transform:scale(.97)}
         a{color:inherit;text-decoration:none}
+
+        .card-hover{transition:all .2s cubic-bezier(.4,0,.2,1)}
+        .card-hover:hover{transform:translateY(-1px);box-shadow:0 8px 32px rgba(0,0,0,.4)}
+
+        /* 트렌드 카드 스켈레톤 */
+        .skeleton{background:linear-gradient(90deg,${T.c} 25%,${T.ch} 50%,${T.c} 75%);background-size:200% 100%;animation:shimmer 1.5s infinite}
       `}</style>
 
       {showApiModal&&<ApiKeyModal onSave={saveApiKey} onSkip={()=>setShowApiModal(false)}/>}
@@ -840,31 +880,35 @@ export default function TrendRadarV5() {
       )}
 
       {/* ── Header ── */}
-      <header style={{padding:"14px 20px",borderBottom:`1px solid ${T.b}`,background:`${T.s}ee`,backdropFilter:"blur(12px)",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100}}>
+      <header style={{padding:"12px 20px",borderBottom:`1px solid ${T.b}`,background:`${T.s}f0`,backdropFilter:"blur(20px)",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100,boxShadow:`0 1px 0 ${T.b},0 4px 24px rgba(0,0,0,.3)`}}>
         <div style={{display:"flex",alignItems:"center",gap:12}}>
-          <div style={{width:38,height:38,borderRadius:11,background:`linear-gradient(135deg,${T.ac},${T.cy})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,fontWeight:900,color:"#fff",boxShadow:`0 0 18px ${T.ac}40`}}>T</div>
+          {/* 로고 */}
+          <div style={{width:36,height:36,borderRadius:10,background:`linear-gradient(135deg,${T.ac} 0%,#a855f7 50%,${T.cy} 100%)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:900,color:"#fff",boxShadow:`0 0 20px ${T.ac}50,inset 0 1px 0 rgba(255,255,255,.2)`,flexShrink:0}}>T</div>
           <div>
-            <div style={{fontSize:16,fontWeight:900,letterSpacing:"-0.04em",display:"flex",alignItems:"center",gap:8}}>
+            <div style={{fontSize:15,fontWeight:800,letterSpacing:"-0.05em",display:"flex",alignItems:"center",gap:7,color:T.t}}>
               TREND RADAR
-              <span style={{fontSize:11,fontFamily:T.m,color:T.r,fontWeight:700,background:T.rd,padding:"2px 6px",borderRadius:4}}>v6</span>
-              <span style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:11,color:T.g,fontFamily:T.m,fontWeight:700}}>
-                <span style={{width:7,height:7,borderRadius:"50%",background:T.g,animation:"liveDot 2s infinite",display:"inline-block"}}/>LIVE
+              <span style={{fontSize:10,fontFamily:T.m,color:"#a855f7",fontWeight:700,background:"#a855f715",padding:"2px 7px",borderRadius:20,border:"1px solid #a855f730",letterSpacing:"0.05em"}}>v6</span>
+              <span style={{display:"inline-flex",alignItems:"center",gap:4,fontSize:10,color:T.g,fontFamily:T.m,fontWeight:700,background:T.gd,padding:"2px 8px",borderRadius:20,border:`1px solid ${T.gb}`}}>
+                <span style={{width:5,height:5,borderRadius:"50%",background:T.g,animation:"liveDot 2s infinite",display:"inline-block",flexShrink:0}}/>LIVE
               </span>
             </div>
-            <div style={{fontSize:11,color:T.ts,fontFamily:T.m,marginTop:1}}>
-              {lastRefresh?`갱신 ${lastRefresh.toLocaleTimeString("ko-KR")} · ${stats.total}개 · ${stats.src}/10 소스`:"데이터 수집중..."}
+            <div style={{fontSize:10,color:T.ts,fontFamily:T.m,marginTop:2,letterSpacing:"0.02em"}}>
+              {lastRefresh?`${lastRefresh.toLocaleTimeString("ko-KR")} 갱신 · ${stats.total}개 수집 · ${stats.src}/10 소스`:"데이터 수집중..."}
             </div>
           </div>
         </div>
-        <div style={{display:"flex",gap:8,alignItems:"center"}}>
-          <button onClick={()=>setShowApiModal(true)} style={{padding:"6px 12px",borderRadius:7,fontSize:11,fontFamily:T.m,fontWeight:700,cursor:"pointer",border:`1px solid ${apiKey?T.gb:T.amb}`,background:apiKey?T.gd:T.amd,color:apiKey?T.g:T.am}}>
-            {apiKey?"🟢 Claude 연결됨":"🟣 API 설정"}
+        <div style={{display:"flex",gap:6,alignItems:"center"}}>
+          <button onClick={()=>setShowApiModal(true)}
+            style={{padding:"5px 11px",borderRadius:20,fontSize:10,fontFamily:T.m,fontWeight:700,border:`1px solid ${apiKey?T.gb:T.amb}`,background:apiKey?T.gd:T.amd,color:apiKey?T.g:T.am,letterSpacing:"0.02em"}}>
+            {apiKey?"● Claude 연결됨":"○ API 설정"}
           </button>
-          <button onClick={()=>setAuto(!auto)} style={{padding:"6px 12px",borderRadius:7,fontSize:11,fontFamily:T.m,fontWeight:700,cursor:"pointer",border:`1px solid ${auto?T.gb:T.ba}`,background:auto?T.gd:"transparent",color:auto?T.g:T.ts}}>
-            {auto?"⏱ 자동갱신":"⏸ 수동"}
+          <button onClick={()=>setAuto(!auto)}
+            style={{padding:"5px 11px",borderRadius:20,fontSize:10,fontFamily:T.m,fontWeight:700,border:`1px solid ${auto?T.gb:T.ba}`,background:auto?T.gd:"transparent",color:auto?T.g:T.ts}}>
+            {auto?"⏱ 자동":"⏸ 수동"}
           </button>
-          <button onClick={()=>fetchAll()} disabled={loading} style={{padding:"6px 14px",borderRadius:7,fontSize:11,fontFamily:T.m,fontWeight:700,cursor:"pointer",background:T.acd,border:`1px solid ${T.acb}`,color:T.ac,opacity:loading?.5:1}}>
-            {loading?"수집중...":"↻ 수집"}
+          <button onClick={()=>fetchAll()} disabled={loading}
+            style={{padding:"5px 14px",borderRadius:20,fontSize:10,fontFamily:T.m,fontWeight:700,background:`linear-gradient(135deg,${T.acd},${T.cyd})`,border:`1px solid ${T.acb}`,color:T.ac,opacity:loading?.5:1,letterSpacing:"0.02em"}}>
+            {loading?"···":"↻ 수집"}
           </button>
         </div>
       </header>
@@ -901,41 +945,75 @@ export default function TrendRadarV5() {
       <div style={{display:"grid",gridTemplateColumns:"repeat(10,1fr)",borderBottom:`1px solid ${T.b}`,background:T.s2}}>
         {Object.entries(SRC).map(([k,v])=>{
           const st2=fStatus[k];
+          const isActive = srcF===k;
+          const hasData = st2?.ok;
           return(
             <div key={k} onClick={()=>setSrcF(srcF===k?"all":k)}
-              style={{padding:"10px 4px",borderRight:`1px solid ${T.b}`,textAlign:"center",cursor:"pointer",background:srcF===k?v.b:"transparent",transition:"all .2s"}}>
-              <div style={{fontSize:18}}>{v.i}</div>
-              <div style={{fontSize:16,fontFamily:T.m,fontWeight:800,color:st2?.ok?T.g:loading?T.am:T.r,marginTop:2}}>{st2?st2.n:"—"}</div>
-              <div style={{fontSize:9,color:T.tm,fontFamily:T.m,marginTop:1}}>{v.l}</div>
+              style={{padding:"8px 3px",borderRight:`1px solid ${T.b}`,textAlign:"center",cursor:"pointer",
+                background:isActive?`${v.c}15`:"transparent",
+                transition:"all .2s",position:"relative"}}>
+              {isActive&&<div style={{position:"absolute",top:0,left:0,right:0,height:2,background:v.c,borderRadius:"0 0 2px 2px"}}/>}
+              <div style={{fontSize:15,lineHeight:1}}>{v.i}</div>
+              <div style={{fontSize:13,fontFamily:T.m,fontWeight:800,
+                color:hasData?v.c:loading?T.am:T.tm,
+                marginTop:3,lineHeight:1}}>
+                {st2?st2.n:"·"}
+              </div>
+              <div style={{fontSize:8,color:isActive?v.c:T.tm,fontFamily:T.m,marginTop:2,
+                fontWeight:isActive?700:400,letterSpacing:"0.03em",
+                overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",padding:"0 2px"}}>
+                {v.l}
+              </div>
             </div>
           );
         })}
       </div>
 
       {/* ── Stats Bar ── */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",borderBottom:`1px solid ${T.b}`}}>
-        {[{l:"전체 수집",v:stats.total,c:T.t},{l:"🔥 폭발",v:stats.exp,c:T.r},{l:"📈 상승",v:stats.rise,c:T.am},{l:"활성 소스",v:`${stats.src}/10`,c:T.ac}].map((s2,i)=>(
-          <div key={i} style={{padding:"14px 10px",textAlign:"center",borderRight:i<3?`1px solid ${T.b}`:"none"}}>
-            <div style={{fontSize:10,color:T.ts,fontFamily:T.m,fontWeight:600}}>{s2.l}</div>
-            <div style={{fontSize:28,fontWeight:900,color:s2.c,fontFamily:T.m,lineHeight:1.1,marginTop:4}}>{s2.v}</div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",borderBottom:`1px solid ${T.b}`,background:`${T.s}80`}}>
+        {[
+          {l:"전체 수집",v:stats.total,c:T.t,sub:"트렌드"},
+          {l:"🔥 폭발",v:stats.exp,c:T.r,sub:"급상승"},
+          {l:"📈 상승",v:stats.rise,c:T.am,sub:"성장중"},
+          {l:"활성 소스",v:`${stats.src}/10`,c:T.ac,sub:"연결됨"}
+        ].map((s2,i)=>(
+          <div key={i} style={{padding:"11px 8px",textAlign:"center",borderRight:i<3?`1px solid ${T.b}`:"none"}}>
+            <div style={{fontSize:9,color:T.ts,fontFamily:T.m,fontWeight:600,letterSpacing:"0.06em",marginBottom:3}}>{s2.l}</div>
+            <div style={{fontSize:22,fontWeight:900,color:s2.c,fontFamily:T.m,lineHeight:1,letterSpacing:"-0.04em"}}>{s2.v}</div>
+            <div style={{fontSize:8,color:T.tm,fontFamily:T.m,marginTop:3,letterSpacing:"0.02em"}}>{s2.sub}</div>
           </div>
         ))}
       </div>
 
       {/* ── Tabs ── */}
-      <div style={{display:"flex",borderBottom:`1px solid ${T.b}`,background:T.s,overflowX:"auto"}}>
+      <div style={{display:"flex",borderBottom:`1px solid ${T.b}`,background:T.s,overflowX:"auto",padding:"0 4px"}}>
         {[
-          {id:"trends",   l:"🔍 트렌드",      n:filtered.length},
-          {id:"youtube",  l:"📺 유튜브",       n:null},
-          {id:"cross",    l:"⚡ 교차분석",     n:null, hot:!!(analysis&&ytResult)},
-          {id:"channel",  l:"📊 채널분석",     n:null},
-          {id:"pipeline", l:"📋 파이프라인",   n:pipe.length},
+          {id:"trends",   l:"트렌드",   i:"🔍", n:filtered.length},
+          {id:"youtube",  l:"유튜브",   i:"📺", n:null},
+          {id:"cross",    l:"교차분석", i:"⚡", n:null, hot:!!(analysis&&ytResult)},
+          {id:"channel",  l:"채널분석", i:"📊", n:null},
+          {id:"pipeline", l:"파이프라인",i:"📋", n:pipe.length},
         ].map(tb=>(
           <button key={tb.id} onClick={()=>setTab(tb.id)}
-            style={{flex:"1 0 auto",padding:"12px 8px",background:"transparent",border:"none",borderBottom:tab===tb.id?`2px solid ${tb.id==="cross"?T.r:T.ac}`:"2px solid transparent",color:tab===tb.id?T.t:T.tm,fontSize:12,fontWeight:700,cursor:"pointer",transition:"all .2s",position:"relative",whiteSpace:"nowrap"}}>
+            style={{flex:"1 0 auto",padding:"11px 10px",background:"transparent",border:"none",
+              borderBottom:tab===tb.id?`2px solid ${tb.id==="cross"?T.r:T.ac}`:"2px solid transparent",
+              color:tab===tb.id?T.t:T.tm,fontSize:11,fontWeight:700,cursor:"pointer",
+              transition:"all .2s",position:"relative",whiteSpace:"nowrap",
+              letterSpacing:"0.01em"}}>
+            <span style={{marginRight:4}}>{tb.i}</span>
             {tb.l}
-            {tb.n!==null&&<span style={{fontFamily:T.m,fontSize:10,background:tab===tb.id?T.acd:T.c,padding:"1px 6px",borderRadius:10,marginLeft:3}}>{tb.n}</span>}
-            {tb.hot&&<span style={{position:"absolute",top:6,right:4,width:7,height:7,borderRadius:"50%",background:T.r,animation:"pulse 1s infinite"}}/>}
+            {tb.n!==null&&(
+              <span style={{fontFamily:T.m,fontSize:9,background:tab===tb.id?T.acd:T.b,
+                padding:"1px 6px",borderRadius:20,marginLeft:4,
+                color:tab===tb.id?T.ac:T.tm,border:`1px solid ${tab===tb.id?T.acb:T.b}`}}>
+                {tb.n}
+              </span>
+            )}
+            {tb.hot&&(
+              <span style={{position:"absolute",top:8,right:6,width:6,height:6,
+                borderRadius:"50%",background:T.r,animation:"pulse 1s infinite",
+                boxShadow:`0 0 6px ${T.r}`}}/>
+            )}
           </button>
         ))}
       </div>
