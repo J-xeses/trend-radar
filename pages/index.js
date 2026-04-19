@@ -1115,8 +1115,7 @@ export default function TrendRadarV5() {
                   ``,
                   `[SEO 키워드]`,
                   (script.seo||[]).join(", ")
-                ].join("
-");
+                ].join("\n");
 
                 // 도구별 프롬프트 생성
                 const prompts = {
@@ -1166,8 +1165,7 @@ ${makeScriptText()}
 ## 편집 순서
 ${(script.sections||[]).map((s,i)=>`${i+1}. [${s.ts}] ${s.name}
    - ${s.desc}
-   - 추천 효과: 자연스러운 컷 편집`).join("
-")}
+   - 추천 효과: 자연스러운 컷 편집`).join("\n")}
 
 ## 썸네일 키워드
 ${(script.seo||[]).join(" | ")}
