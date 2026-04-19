@@ -1,6 +1,32 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Head from "next/head";
 
+/* ─── Lucide-style SVG Icons ─── */
+const Icon = ({ name, size=16, color="currentColor", style={} }) => {
+  const icons = {
+    trend:    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>,
+    youtube:  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46a2.78 2.78 0 0 0-1.95 1.96A29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58A2.78 2.78 0 0 0 3.41 19.6C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.96A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z"/><polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02" fill={color} stroke="none"/></svg>,
+    zap:      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" fill={color} stroke="none"/></svg>,
+    bar:      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
+    list:     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>,
+    rocket:   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>,
+    brain:    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96-.46 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96-.46 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>,
+    script:   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>,
+    refresh:  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>,
+    settings: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,
+    fire:     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>,
+    grid:     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>,
+    eye:      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>,
+    check:    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
+    plus:     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+    x:        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+    arrow:    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>,
+    signal:   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 20h.01"/><path d="M7 20v-4"/><path d="M12 20v-8"/><path d="M17 20V8"/><path d="M22 4v16"/></svg>,
+    cpu:      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>,
+  };
+  return <span style={{display:"inline-flex",alignItems:"center",flexShrink:0,...style}}>{icons[name]||icons.trend}</span>;
+};
+
 /* ─── Design Tokens v2 ─── */
 const T = {
   // 배경 계층 (더 깊고 풍부한 다크)
@@ -310,15 +336,25 @@ const Bar = ({ pct, color=T.ac }) => (
 );
 
 const Spin = ({ s=16, c=T.ac }) => (
-  <div style={{ width:s,height:s,border:`2px solid ${c}25`,borderTopColor:c,borderRadius:"50%",animation:"spin .7s linear infinite",flexShrink:0 }} />
+  <div style={{ width:s,height:s,border:`2px solid ${c}20`,borderTopColor:c,
+    borderRadius:"50%",animation:"spin .6s linear infinite",flexShrink:0,
+    boxShadow:`0 0 8px ${c}30` }} />
 );
 
 const WorkflowStep = ({ label, icon, active, done }) => (
-  <div style={{ display:"flex",flexDirection:"column",alignItems:"center",gap:4,flex:1 }}>
-    <div style={{ width:38,height:38,borderRadius:10,background:done?T.gd:active?T.acd:T.c,border:`2px solid ${done?T.g:active?T.ac:T.ba}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,transition:"all .3s",boxShadow:active?`0 0 12px ${T.ac}40`:done?`0 0 12px ${T.g}30`:"none" }}>
+  <div style={{ display:"flex",flexDirection:"column",alignItems:"center",gap:3,flex:1 }}>
+    <div style={{
+      width:34,height:34,borderRadius:10,
+      background:done?`linear-gradient(135deg,${T.gd},${T.g}15)`:active?`linear-gradient(135deg,${T.acd},${T.ac}15)`:T.c,
+      border:`1.5px solid ${done?T.g:active?T.ac:T.ba}`,
+      display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,
+      transition:"all .3s cubic-bezier(.4,0,.2,1)",
+      boxShadow:active?`0 0 16px ${T.ac}50,0 4px 12px rgba(0,0,0,.3)`:done?`0 0 10px ${T.g}30`:"none",
+      transform:active?"scale(1.08)":"scale(1)"
+    }}>
       {icon}
     </div>
-    <div style={{ fontSize:10,fontWeight:700,color:done?T.g:active?T.ac:T.tm,textAlign:"center",fontFamily:T.m }}>{label}</div>
+    <div style={{ fontSize:9,fontWeight:700,color:done?T.g:active?T.ac:T.tm,textAlign:"center",fontFamily:T.m,letterSpacing:"0.03em" }}>{label}</div>
   </div>
 );
 
@@ -637,13 +673,18 @@ export default function TrendRadarV5() {
 
   return(<>
     <Head>
-      <title>Trend Radar v5 — AI 콘텐츠 파이프라인</title>
+      <title>Trend Radar v6 — AI 콘텐츠 파이프라인</title>
       <meta name="viewport" content="width=device-width,initial-scale=1"/>
-      <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+      <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
     </Head>
-    <div style={{minHeight:"100vh",background:T.bg,color:T.t,fontFamily:T.f}}>
+    <div style={{minHeight:"100vh",background:T.bg,color:T.t,fontFamily:T.f,
+      backgroundImage:`radial-gradient(circle at 20% 20%, ${T.ac}06 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, #a855f706 0%, transparent 50%),
+        radial-gradient(circle at 50% 50%, ${T.cy}04 0%, transparent 70%)`,
+      backgroundAttachment:"fixed"}}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&display=swap');
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
 
         @keyframes spin{to{transform:rotate(360deg)}}
         @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
@@ -883,7 +924,7 @@ export default function TrendRadarV5() {
       <header style={{padding:"12px 20px",borderBottom:`1px solid ${T.b}`,background:`${T.s}f0`,backdropFilter:"blur(20px)",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100,boxShadow:`0 1px 0 ${T.b},0 4px 24px rgba(0,0,0,.3)`}}>
         <div style={{display:"flex",alignItems:"center",gap:12}}>
           {/* 로고 */}
-          <div style={{width:36,height:36,borderRadius:10,background:`linear-gradient(135deg,${T.ac} 0%,#a855f7 50%,${T.cy} 100%)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:900,color:"#fff",boxShadow:`0 0 20px ${T.ac}50,inset 0 1px 0 rgba(255,255,255,.2)`,flexShrink:0}}>T</div>
+          <div style={{width:36,height:36,borderRadius:10,background:`linear-gradient(135deg,${T.ac} 0%,#a855f7 50%,${T.cy} 100%)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:900,color:"#fff",boxShadow:`0 0 20px ${T.ac}50,inset 0 1px 0 rgba(255,255,255,.2)`,flexShrink:0}}><Icon name="signal" size={18} color="#fff"/></div>
           <div>
             <div style={{fontSize:15,fontWeight:800,letterSpacing:"-0.05em",display:"flex",alignItems:"center",gap:7,color:T.t}}>
               TREND RADAR
@@ -988,31 +1029,32 @@ export default function TrendRadarV5() {
       {/* ── Tabs ── */}
       <div style={{display:"flex",borderBottom:`1px solid ${T.b}`,background:T.s,overflowX:"auto",padding:"0 4px"}}>
         {[
-          {id:"trends",   l:"트렌드",   i:"🔍", n:filtered.length},
-          {id:"youtube",  l:"유튜브",   i:"📺", n:null},
-          {id:"cross",    l:"교차분석", i:"⚡", n:null, hot:!!(analysis&&ytResult)},
-          {id:"channel",  l:"채널분석", i:"📊", n:null},
-          {id:"pipeline", l:"파이프라인",i:"📋", n:pipe.length},
+          {id:"trends",   l:"트렌드",    ic:"trend",   n:filtered.length, c:T.ac},
+          {id:"youtube",  l:"유튜브",    ic:"youtube", n:null, c:"#ff0000"},
+          {id:"cross",    l:"교차분석",  ic:"zap",     n:null, hot:!!(analysis&&ytResult), c:T.r},
+          {id:"channel",  l:"채널분석",  ic:"bar",     n:null, c:T.ro},
+          {id:"pipeline", l:"파이프라인",ic:"list",    n:pipe.length, c:T.g},
         ].map(tb=>(
           <button key={tb.id} onClick={()=>setTab(tb.id)}
-            style={{flex:"1 0 auto",padding:"11px 10px",background:"transparent",border:"none",
-              borderBottom:tab===tb.id?`2px solid ${tb.id==="cross"?T.r:T.ac}`:"2px solid transparent",
-              color:tab===tb.id?T.t:T.tm,fontSize:11,fontWeight:700,cursor:"pointer",
-              transition:"all .2s",position:"relative",whiteSpace:"nowrap",
-              letterSpacing:"0.01em"}}>
-            <span style={{marginRight:4}}>{tb.i}</span>
-            {tb.l}
-            {tb.n!==null&&(
-              <span style={{fontFamily:T.m,fontSize:9,background:tab===tb.id?T.acd:T.b,
-                padding:"1px 6px",borderRadius:20,marginLeft:4,
-                color:tab===tb.id?T.ac:T.tm,border:`1px solid ${tab===tb.id?T.acb:T.b}`}}>
-                {tb.n}
-              </span>
-            )}
+            style={{flex:"1 0 auto",padding:"10px 8px",background:tab===tb.id?`${tb.c}10`:"transparent",
+              border:"none",borderBottom:tab===tb.id?`2px solid ${tb.c}`:"2px solid transparent",
+              color:tab===tb.id?tb.c:T.tm,fontSize:10,fontWeight:700,cursor:"pointer",
+              transition:"all .2s",position:"relative",whiteSpace:"nowrap",letterSpacing:"0.01em"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
+              <Icon name={tb.ic} size={13} color={tab===tb.id?tb.c:T.tm}/>
+              <span>{tb.l}</span>
+              {tb.n!==null&&(
+                <span style={{fontFamily:T.m,fontSize:8,background:tab===tb.id?`${tb.c}20`:T.b,
+                  padding:"1px 5px",borderRadius:20,
+                  color:tab===tb.id?tb.c:T.tm,border:`1px solid ${tab===tb.id?`${tb.c}40`:T.b}`}}>
+                  {tb.n}
+                </span>
+              )}
+            </div>
             {tb.hot&&(
-              <span style={{position:"absolute",top:8,right:6,width:6,height:6,
+              <span style={{position:"absolute",top:7,right:5,width:5,height:5,
                 borderRadius:"50%",background:T.r,animation:"pulse 1s infinite",
-                boxShadow:`0 0 6px ${T.r}`}}/>
+                boxShadow:`0 0 5px ${T.r}`}}/>
             )}
           </button>
         ))}
@@ -1094,10 +1136,21 @@ export default function TrendRadarV5() {
             {apiError&&<div style={{padding:16,margin:14,background:T.rd,borderRadius:9,fontSize:12,color:T.r}}>⚠️ {apiError}</div>}
             {analysis&&!analysis.error&&<div style={{padding:16}}>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:14}}>
-                {[{l:"기회점수",v:`${analysis.opportunity}/10`,c:T.ac},{l:"경쟁강도",v:analysis.competition,c:T.t},{l:"시급성",v:analysis.urgency,c:analysis.urgency==="즉시"?T.r:T.am}].map((s2,i)=>(
-                  <div key={i} style={{background:T.c,borderRadius:10,padding:"14px 10px",textAlign:"center"}}>
-                    <div style={{fontSize:10,color:T.ts,fontFamily:T.m,fontWeight:600}}>{s2.l}</div>
-                    <div style={{fontSize:20,fontWeight:900,color:s2.c,fontFamily:T.m,marginTop:4}}>{s2.v}</div>
+                {[
+                  {l:"기회점수",v:`${analysis.opportunity}`,sub:"/10",c:T.ac,ic:"signal"},
+                  {l:"경쟁강도",v:analysis.competition,sub:"",c:T.t,ic:"eye"},
+                  {l:"시급성",v:analysis.urgency,sub:"",c:analysis.urgency==="즉시"?T.r:T.am,ic:"fire"}
+                ].map((s2,i)=>(
+                  <div key={i} style={{background:`linear-gradient(135deg,${s2.c}10,${T.c})`,
+                    borderRadius:12,padding:"14px 10px",textAlign:"center",
+                    border:`1px solid ${s2.c}20`,position:"relative",overflow:"hidden"}}>
+                    <div style={{position:"absolute",top:8,right:8,opacity:.15}}>
+                      <Icon name={s2.ic} size={28} color={s2.c}/>
+                    </div>
+                    <div style={{fontSize:9,color:T.ts,fontFamily:T.m,fontWeight:600,letterSpacing:"0.06em",marginBottom:6}}>{s2.l}</div>
+                    <div style={{fontSize:26,fontWeight:900,color:s2.c,fontFamily:T.m,lineHeight:1,letterSpacing:"-0.04em"}}>
+                      {s2.v}<span style={{fontSize:13,opacity:.6}}>{s2.sub}</span>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1964,10 +2017,14 @@ A professional Korean office worker in their 30s, wearing smart casual business 
                 {STAGES.map(s2=>{
                   const cnt=pipe.filter(p=>p.stage===s2.id).length;
                   return(
-                    <div key={s2.id} style={{background:T.c,border:`1px solid ${cnt>0?s2.c+"40":T.b}`,borderRadius:10,padding:"12px 8px",textAlign:"center"}}>
-                      <div style={{fontSize:20}}>{s2.i}</div>
-                      <div style={{fontSize:11,fontWeight:700,color:s2.c,fontFamily:T.m,marginTop:4}}>{s2.l}</div>
-                      <div style={{fontSize:24,fontWeight:900,color:cnt>0?s2.c:T.tm,fontFamily:T.m}}>{cnt}</div>
+                    <div key={s2.id} style={{
+                      background:cnt>0?`linear-gradient(135deg,${s2.c}15,${T.c})`:`${T.c}`,
+                      border:`1px solid ${cnt>0?s2.c+"35":T.b}`,
+                      borderRadius:12,padding:"14px 8px",textAlign:"center",
+                      transition:"all .2s",boxShadow:cnt>0?`0 4px 16px ${s2.c}15`:"none"}}>
+                      <div style={{fontSize:22,marginBottom:2}}>{s2.i}</div>
+                      <div style={{fontSize:9,fontWeight:700,color:s2.c,fontFamily:T.m,marginTop:4,letterSpacing:"0.05em"}}>{s2.l}</div>
+                      <div style={{fontSize:28,fontWeight:900,color:cnt>0?s2.c:T.tm,fontFamily:T.m,lineHeight:1.1,letterSpacing:"-0.04em"}}>{cnt}</div>
                     </div>
                   );
                 })}
