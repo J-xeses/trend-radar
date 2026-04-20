@@ -27,26 +27,17 @@ const Icon = ({ name, size=16, color="currentColor", style={} }) => {
   return <span style={{display:"inline-flex",alignItems:"center",flexShrink:0,...style}}>{icons[name]||icons.trend}</span>;
 };
 
-/* ─── Design Tokens v2 ─── */
+/* ─── Design Tokens v3 ─── */
 const T = {
-  // 배경 계층 (더 깊고 풍부한 다크)
-  bg:"#050508", s:"#0a0a12", s2:"#0f0f1a", c:"#141420", ch:"#1a1a28",
-  ca:"#1e1e2e", b:"#ffffff08", ba:"#ffffff14", bg2:"#ffffff22",
-  // 메인 액센트 - 더 선명하고 고급스러운 인디고/바이올렛
-  ac:"#7c6ff7", acd:"#7c6ff710", acb:"#7c6ff728",
-  // 성공 - 에메랄드
-  g:"#10d9a0", gd:"#10d9a010", gb:"#10d9a028",
-  // 경고 - 앰버
-  am:"#f59e0b", amd:"#f59e0b10", amb:"#f59e0b28",
-  // 위험 - 로즈
-  r:"#fb4f67", rd:"#fb4f6710", rb:"#fb4f6728",
-  // 정보 - 스카이
-  cy:"#0ea5e9", cyd:"#0ea5e910", cyb:"#0ea5e928",
-  // 핑크-오렌지
-  ro:"#f97316", rod:"#f9731610",
-  // 텍스트 계층
-  t:"#f0f0fc", ts:"#8080a8", tm:"#4a4a6a",
-  // 폰트 - 더 특색있는 조합
+  bg:"#07070f", s:"#0d0d1a", s2:"#111120", c:"#141420", ch:"#161628",
+  ca:"#1e1e2e", b:"rgba(255,255,255,0.07)", ba:"rgba(255,255,255,0.13)", bg2:"rgba(255,255,255,0.2)",
+  ac:"#7c6ff7", acd:"rgba(124,111,247,0.1)", acb:"rgba(124,111,247,0.28)",
+  g:"#10c98a", gd:"rgba(16,201,138,0.1)", gb:"rgba(16,201,138,0.28)",
+  am:"#f59e0b", amd:"rgba(245,158,11,0.1)", amb:"rgba(245,158,11,0.28)",
+  r:"#f05252", rd:"rgba(240,82,82,0.1)", rb:"rgba(240,82,82,0.28)",
+  cy:"#0ea5e9", cyd:"rgba(14,165,233,0.1)", cyb:"rgba(14,165,233,0.28)",
+  ro:"#f97316", rod:"rgba(249,115,22,0.1)",
+  t:"#ffffff", ts:"#c0c0e0", tm:"#50507a",
   m:"'IBM Plex Mono','Fira Code',monospace",
   f:"'Pretendard','Noto Sans KR',-apple-system,sans-serif"
 };
@@ -684,37 +675,45 @@ export default function TrendRadarV5() {
       backgroundAttachment:"fixed"}}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&display=swap');
-        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
 
         @keyframes spin{to{transform:rotate(360deg)}}
-        @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
         @keyframes fadeIn{from{opacity:0}to{opacity:1}}
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
         @keyframes liveDot{0%,100%{box-shadow:0 0 0 0 ${T.g}70}50%{box-shadow:0 0 0 8px ${T.g}00}}
         @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
-        @keyframes slideIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
-        @keyframes glow{0%,100%{box-shadow:0 0 20px ${T.ac}20}50%{box-shadow:0 0 35px ${T.ac}40}}
+        @keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
 
         *{box-sizing:border-box;margin:0;scrollbar-width:thin;scrollbar-color:${T.ba} transparent}
         ::-webkit-scrollbar{width:4px;height:4px}
         ::-webkit-scrollbar-track{background:transparent}
         ::-webkit-scrollbar-thumb{background:${T.ba};border-radius:4px}
-        ::-webkit-scrollbar-thumb:hover{background:${T.bg2}}
 
         html{scroll-behavior:smooth}
         body{margin:0;background:${T.bg};font-family:${T.f}}
         input,textarea,select{font-family:${T.f}}
         input:focus,button:focus,textarea:focus{outline:none}
         button{cursor:pointer;font-family:${T.f};transition:all .18s cubic-bezier(.4,0,.2,1)}
-        button:hover{filter:brightness(1.12) saturate(1.1)}
+        button:hover{filter:brightness(1.1)}
         button:active{transform:scale(.97)}
         a{color:inherit;text-decoration:none}
 
+        /* 섹션 헤더 타이틀 */
+        .sec-hd{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 10px}
+        .sec-hd-left{display:flex;align-items:center;gap:10px}
+        .sec-hd-accent{width:3px;height:20px;border-radius:3px;flex-shrink:0}
+        .sec-hd-title{font-size:15px;font-weight:800;color:#ffffff;letter-spacing:-0.04em}
+        .sec-hd-sub{font-size:9px;font-family:${T.m};color:${T.tm};letter-spacing:0.03em}
+
+        /* 사이드바 섹션 타이틀 */
+        .sb-title{font-size:14px;font-weight:800;color:#ffffff;letter-spacing:-0.03em;
+          padding:0 6px;margin:16px 0 8px;display:flex;align-items:center;gap:8px}
+        .sb-title:first-child{margin-top:0}
+        .sb-title-bar{flex:1;height:1px;background:${T.ba}}
+
+        /* 카드 호버 */
         .card-hover{transition:all .2s cubic-bezier(.4,0,.2,1)}
         .card-hover:hover{transform:translateY(-1px);box-shadow:0 8px 32px rgba(0,0,0,.4)}
-
-        /* 트렌드 카드 스켈레톤 */
-        .skeleton{background:linear-gradient(90deg,${T.c} 25%,${T.ch} 50%,${T.c} 75%);background-size:200% 100%;animation:shimmer 1.5s infinite}
       `}</style>
 
       {showApiModal&&<ApiKeyModal onSave={saveApiKey} onSkip={()=>setShowApiModal(false)}/>}
@@ -955,35 +954,80 @@ export default function TrendRadarV5() {
       </header>
 
       {/* ── Workflow Bar ── */}
-      <div style={{padding:"14px 20px",background:T.s,borderBottom:`1px solid ${T.b}`}}>
-        <div style={{fontSize:10,fontFamily:T.m,color:T.tm,marginBottom:10,fontWeight:600,letterSpacing:".08em"}}>WORKFLOW — 콘텐츠 제작 파이프라인</div>
-        <div style={{display:"flex",alignItems:"center",gap:0}}>
-          <WorkflowStep label="수집" icon="📡" active={workflowStep===0} done={workflowStep>0}/>
-          <div style={{color:T.tm,fontSize:12,paddingBottom:16,flexShrink:0}}>›</div>
-          <WorkflowStep label="AI분석" icon="🤖" active={workflowStep===1} done={workflowStep>1}/>
-          <div style={{color:T.tm,fontSize:12,paddingBottom:16,flexShrink:0}}>›</div>
-          <WorkflowStep label="유튜브" icon="📺" active={workflowStep===2} done={workflowStep>2}/>
-          <div style={{color:T.tm,fontSize:12,paddingBottom:16,flexShrink:0}}>›</div>
-          <WorkflowStep label="교차분석" icon="⚡" active={workflowStep===3} done={workflowStep>3}/>
-          <div style={{color:T.tm,fontSize:12,paddingBottom:16,flexShrink:0}}>›</div>
-          <WorkflowStep label="채널분석" icon="📊" active={workflowStep===4} done={workflowStep>4}/>
-          <div style={{color:T.tm,fontSize:12,paddingBottom:16,flexShrink:0}}>›</div>
-          <WorkflowStep label="파이프라인" icon="📋" active={workflowStep===5} done={false}/>
+      <div style={{borderBottom:`1px solid ${T.b}`,background:T.s}}>
+        <div className="sec-hd">
+          <div className="sec-hd-left">
+            <div className="sec-hd-accent" style={{background:T.ac}}/>
+            <span className="sec-hd-title">워크플로우</span>
+          </div>
+          <span className="sec-hd-sub">
+            {workflowStep===0&&"👆 트렌드 카드 클릭 → AI 분석 시작"}
+            {workflowStep===1&&"🤖 Claude가 콘텐츠 기회를 분석중..."}
+            {workflowStep===2&&"📺 유튜브 탭 → 경쟁 영상 분석하세요"}
+            {workflowStep===3&&"⚡ 교차분석 탭 → 블루오션 각도를 찾으세요!"}
+            {workflowStep===4&&"📊 채널분석 탭 → 경쟁 채널을 분석하세요"}
+            {workflowStep===5&&"📋 파이프라인에 추가됐어요! 제작을 시작하세요 🎬"}
+          </span>
         </div>
-        <div style={{fontSize:11,marginTop:8,textAlign:"center",fontWeight:600,
-          color:workflowStep===0?T.ts:workflowStep===1?T.ac:workflowStep===2?T.cy:workflowStep===3?T.r:workflowStep===4?T.ro:T.g,
-          animation:workflowStep===1||workflowStep===3?"pulse 1.5s infinite":"none"}}>
-          {workflowStep===0&&"👆 트렌드 카드 클릭 → AI 분석 시작"}
-          {workflowStep===1&&"🤖 Claude가 콘텐츠 기회를 분석중..."}
-          {workflowStep===2&&"📺 유튜브 탭 → 경쟁 영상 분석하세요"}
-          {workflowStep===3&&"⚡ 교차분석 탭 → 블루오션 각도를 찾으세요!"}
-          {workflowStep===4&&"📊 채널분석 탭 → 경쟁 채널을 분석하세요"}
-          {workflowStep===5&&"📋 파이프라인에 추가됐어요! 제작을 시작하세요 🎬"}
+        {/* 6개 카드 그리드 */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:8,padding:"0 16px 14px"}}>
+          {[
+            {step:"STEP 01",label:"수집",    icon:"📡", done:workflowStep>0, active:workflowStep===0, stat:workflowStep>0?`완료 · ${stats.total}개`:"대기중"},
+            {step:"STEP 02",label:"AI 분석", icon:"🤖", done:workflowStep>1, active:workflowStep===1, stat:workflowStep===1?"분석중...":workflowStep>1?"완료":"대기중"},
+            {step:"STEP 03",label:"유튜브",  icon:"📺", done:workflowStep>2, active:workflowStep===2, stat:workflowStep>2?"완료":"대기중"},
+            {step:"STEP 04",label:"교차분석",icon:"⚡", done:workflowStep>3, active:workflowStep===3, stat:workflowStep>3?"완료":"대기중"},
+            {step:"STEP 05",label:"채널분석",icon:"📊", done:workflowStep>4, active:workflowStep===4, stat:workflowStep>4?"완료":"대기중"},
+            {step:"STEP 06",label:"파이프라인",icon:"📋",done:false,         active:workflowStep===5, stat:`${pipe.length}개 등록`},
+          ].map((wf,i)=>(
+            <div key={i} style={{
+              background:wf.done?`rgba(16,201,138,0.05)`:wf.active?`rgba(124,111,247,0.1)`:T.c,
+              border:`1px solid ${wf.done?T.gb:wf.active?T.acb:T.b}`,
+              borderRadius:12, padding:"12px 8px", textAlign:"center",
+              cursor:"pointer", transition:"all .2s",
+              position:"relative", overflow:"hidden",
+              boxShadow:wf.active?`0 0 20px rgba(124,111,247,0.18)`:"none",
+              opacity:(!wf.done&&!wf.active&&workflowStep<i)?.55:1,
+            }}>
+              {/* 상단 컬러 라인 */}
+              <div style={{position:"absolute",top:0,left:0,right:0,height:2,borderRadius:"12px 12px 0 0",
+                background:wf.done?T.g:wf.active?T.ac:"transparent"}}/>
+              <div style={{fontSize:8,fontFamily:T.m,fontWeight:700,letterSpacing:"0.06em",marginBottom:8,
+                color:wf.done?`rgba(16,201,138,0.7)`:wf.active?`rgba(124,111,247,0.8)`:T.tm}}>
+                {wf.step}
+              </div>
+              <div style={{
+                width:34,height:34,borderRadius:9,margin:"0 auto 8px",
+                display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,
+                background:wf.done?`rgba(16,201,138,0.12)`:wf.active?`rgba(124,111,247,0.15)`:`rgba(255,255,255,0.04)`,
+                transform:wf.active?"scale(1.08)":"scale(1)",
+                transition:"transform .3s"
+              }}>
+                {wf.icon}
+              </div>
+              <div style={{fontSize:11,fontWeight:700,marginBottom:3,
+                color:wf.done?T.g:wf.active?`#a78bfa`:T.tm}}>
+                {wf.label}
+              </div>
+              <div style={{fontSize:8,fontFamily:T.m,
+                color:wf.active?`rgba(124,111,247,0.7)`:T.tm,
+                animation:wf.active?"pulse 1.5s infinite":"none"}}>
+                {wf.stat}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
       {/* ── Source Status ── */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(10,1fr)",borderBottom:`1px solid ${T.b}`,background:T.s2}}>
+      <div style={{borderBottom:`1px solid ${T.b}`,background:T.s2}}>
+        <div className="sec-hd">
+          <div className="sec-hd-left">
+            <div className="sec-hd-accent" style={{background:T.ac}}/>
+            <span className="sec-hd-title">소스 현황</span>
+          </div>
+          <span className="sec-hd-sub">10개 소스 실시간 모니터링</span>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(10,1fr)",borderTop:`1px solid ${T.b}`}}>
         {Object.entries(SRC).map(([k,v])=>{
           const st2=fStatus[k];
           const isActive = srcF===k;
@@ -1008,10 +1052,19 @@ export default function TrendRadarV5() {
             </div>
           );
         })}
+        </div>
       </div>
 
       {/* ── Stats Bar ── */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",borderBottom:`1px solid ${T.b}`,background:`${T.s}80`}}>
+      <div style={{borderBottom:`1px solid ${T.b}`,background:T.s}}>
+        <div className="sec-hd">
+          <div className="sec-hd-left">
+            <div className="sec-hd-accent" style={{background:T.cy}}/>
+            <span className="sec-hd-title">수집 현황</span>
+          </div>
+          <span className="sec-hd-sub">최근 6시간 기준</span>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",borderTop:`1px solid ${T.b}`}}>
         {[
           {l:"전체 수집",v:stats.total,c:T.t,sub:"트렌드"},
           {l:"🔥 폭발",v:stats.exp,c:T.r,sub:"급상승"},
@@ -1024,10 +1077,12 @@ export default function TrendRadarV5() {
             <div style={{fontSize:8,color:T.tm,fontFamily:T.m,marginTop:3,letterSpacing:"0.02em"}}>{s2.sub}</div>
           </div>
         ))}
+        </div>
       </div>
 
       {/* ── Tabs ── */}
-      <div style={{display:"flex",borderBottom:`1px solid ${T.b}`,background:T.s,overflowX:"auto",padding:"0 4px"}}>
+      <div style={{borderBottom:`1px solid ${T.b}`,background:T.s}}>
+      <div style={{display:"flex",overflowX:"auto",padding:"0 4px"}}>
         {[
           {id:"trends",   l:"트렌드",    ic:"trend",   n:filtered.length, c:T.ac},
           {id:"youtube",  l:"유튜브",    ic:"youtube", n:null, c:"#ff0000"},
@@ -1059,9 +1114,17 @@ export default function TrendRadarV5() {
           </button>
         ))}
       </div>
+      </div>
 
       {/* ══ TRENDS TAB ══ */}
       {tab==="trends"&&<div>
+        <div className="sec-hd" style={{background:T.s,borderBottom:`1px solid ${T.b}`}}>
+          <div className="sec-hd-left">
+            <div className="sec-hd-accent" style={{background:T.g}}/>
+            <span className="sec-hd-title">트렌드 분석</span>
+          </div>
+          <span className="sec-hd-sub">클릭하면 AI 분석 시작</span>
+        </div>
         <div style={{padding:"10px 16px",borderBottom:`1px solid ${T.b}`}}>
           <input value={q} onChange={e=>setQ(e.target.value)} placeholder="🔍 키워드 검색..."
             style={{width:"100%",background:T.c,border:`1px solid ${T.b}`,borderRadius:9,padding:"10px 14px",color:T.t,fontSize:13}}/>
@@ -1415,7 +1478,9 @@ A professional Korean office worker in their 30s, wearing smart casual business 
 
       {/* ══ YOUTUBE BENCHMARKING TAB ══ */}
       {tab==="youtube"&&(
-        <div style={{padding:16,animation:"fadeUp .3s ease"}}>
+        <div style={{animation:"fadeUp .3s ease"}}>
+          <div className="sec-hd" style={{background:T.s,borderBottom:`1px solid ${T.b}`,padding:"14px 18px 12px"}}><div className="sec-hd-left"><div className="sec-hd-accent" style={{background:"#ff4444"}}/><span className="sec-hd-title">유튜브 벤치마킹</span></div><span className="sec-hd-sub">경쟁 채널 & 영상 분석</span></div>
+          <div style={{padding:16}}>
 
           {/* 키워드 + 유튜브 바로가기 */}
           <div style={{marginBottom:12}}>
@@ -1603,7 +1668,9 @@ A professional Korean office worker in their 30s, wearing smart casual business 
 
       {/* ══ CROSS ANALYSIS TAB ══ */}
       {tab==="cross"&&(
-        <div style={{padding:16,animation:"fadeUp .3s ease"}}>
+        <div style={{animation:"fadeUp .3s ease"}}>
+          <div className="sec-hd" style={{background:T.s,borderBottom:`1px solid ${T.b}`,padding:"14px 18px 12px"}}><div className="sec-hd-left"><div className="sec-hd-accent" style={{background:T.r}}/><span className="sec-hd-title">교차분석</span></div><span className="sec-hd-sub">트렌드 × 유튜브 블루오션 발견</span></div>
+          <div style={{padding:16}}>
 
           {/* 준비 상태 표시 */}
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:16}}>
@@ -1792,7 +1859,9 @@ A professional Korean office worker in their 30s, wearing smart casual business 
 
       {/* ══ CHANNEL ANALYSIS TAB ══ */}
       {tab==="channel"&&(
-        <div style={{padding:16,animation:"fadeUp .3s ease"}}>
+        <div style={{animation:"fadeUp .3s ease"}}>
+          <div className="sec-hd" style={{background:T.s,borderBottom:`1px solid ${T.b}`,padding:"14px 18px 12px"}}><div className="sec-hd-left"><div className="sec-hd-accent" style={{background:T.ro}}/><span className="sec-hd-title">채널분석</span></div><span className="sec-hd-sub">경쟁 채널 벤치마킹</span></div>
+          <div style={{padding:16}}>
 
           {/* 안내 배너 */}
           <div style={{background:`${T.ro}0a`,border:`1px solid ${T.rod}`,borderRadius:12,padding:14,marginBottom:16,display:"flex",gap:10,alignItems:"flex-start"}}>
@@ -1984,7 +2053,9 @@ A professional Korean office worker in their 30s, wearing smart casual business 
 
       {/* ══ PIPELINE TAB ══ */}
       {tab==="pipeline"&&(
-        <div style={{padding:16,animation:"fadeUp .3s ease"}}>
+        <div style={{animation:"fadeUp .3s ease"}}>
+          <div className="sec-hd" style={{background:T.s,borderBottom:`1px solid ${T.b}`,padding:"14px 18px 12px"}}><div className="sec-hd-left"><div className="sec-hd-accent" style={{background:T.g}}/><span className="sec-hd-title">파이프라인</span></div><span className="sec-hd-sub">콘텐츠 제작 현황 관리</span></div>
+          <div style={{padding:16}}>
           {!pipe.length?(
             <div style={{textAlign:"center",padding:40,color:T.tm}}>
               <div style={{fontSize:44,marginBottom:12}}>📋</div>
