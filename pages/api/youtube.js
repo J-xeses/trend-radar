@@ -1,28 +1,40 @@
 // pages/api/youtube.js
-// 서버사이드에서 유튜브 RSS 수집 — CORS 완전 해결
-
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  if (req.method !== "GET") return res.status(405).end();
-  const { type } = req.query;
+  res.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS");
+  if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
+
+  const { type, ids } = req.query;
+
   try {
     if (type === "trending") {
-      const response = await fetch("https://www.youtube.com/feeds/videos.xml?chart=0&gl=KR&hl=ko",{ headers: { "User-Agent": "Mozilla/5.0" } });
-      const text = await response.text();
-      return res.status(200).json({ xml: text });
-    } else if (type === "channels") {
-      const ids = (req.query.ids || "").split(",").filter(Boolean).slice(0, 15);
-      const results = await Promise.all(ids.map(async (cid) => {
-        try {
-          const r = await fetch(`https://www.youtube.com/feeds/videos.xml?channel_id=${cid}`,{ headers: { "User-Agent": "Mozilla/5.0" } });
-          const xml = await r.text();
-          return { cid, xml };
-        } catch { return { cid, xml: "" }; }
-      }));
-      return res.status(200).json({ channels: results });
-    } else {
-      return res.status(400).json({ error: "type=trending 또는 type=channels&ids=... 필요" });
+      const url = "https://www.youtube.com/feeds/videos.xml?chart=mostPopular&regionCode=KR&hl=ko_KR&maxResults=15";
+      const response = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
+      if (!response.ok) throw new Error("YouTube RSS fetch failed: " + response.status);
+      const xml = await response.text();
+      return res.status(200).json({ xml });
     }
+
+    if (type === "channels" && ids) {
+      const channelIds = ids.split(",").slice(0, 10);
+      const results = await Promise.all(
+        channelIds.map(async (cid) => {
+          try {
+            const url = `https://www.youtube.com/feeds/videos.xml?channel_id=${cid}`;
+            const response = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
+            if (!response.ok) return { cid, xml: null };
+            const xml = await response.text();
+            return { cid, xml };
+          } catch {
+            return { cid, xml: null };
+          }
+        })
+      );
+      return res.status(200).json({ channels: results });
+    }
+
+    return res.status(400).json({ error: "type must be trending or channels" });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
