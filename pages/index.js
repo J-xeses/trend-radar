@@ -1654,7 +1654,7 @@ A professional Korean office worker in their 30s, wearing smart casual business 
               {ytResult.recommended_title&&(
                 <button
                   onClick={()=>{
-                    setPipe(p=>[...p,{id:Date.now(),trend:`[벤치마킹] ${ytKeyword}`,video:ytResult.recommended_title,format:"롱폼",stage:"discovered",added:new Date().toLocaleString("ko-KR"),score:90}]);
+                    setPipe(p=>[...p,{id:Date.now(),trend:`[벤치마킹] ${ytKeyword}`,video:ytResult.recommended_title||"",format:"롱폼",stage:"discovered",added:new Date().toLocaleString("ko-KR"),score:90}]);
                     setTab("pipeline");
                   }}
                   style={{width:"100%",padding:"11px",borderRadius:9,background:T.acd,border:`1px solid ${T.acb}`,color:T.ac,fontSize:13,fontWeight:700,cursor:"pointer"}}>
