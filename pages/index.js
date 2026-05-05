@@ -1665,7 +1665,6 @@ A professional Korean office worker in their 30s, wearing smart casual business 
           )}
         </div>
       )}
-      )}
 
       {/* ══ CROSS ANALYSIS TAB ══ */}
       {tab==="cross"&&(
