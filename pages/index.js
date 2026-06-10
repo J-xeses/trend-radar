@@ -157,6 +157,7 @@ function timeAgo(t) {
 // ─── 메인 컴포넌트 ────────────────────────────────────────────
 export default function TrendRadar() {
   // 데이터
+  const sidebarRef = useRef(null);
   const [items, setItems]       = useState([]);
   const [loading, setLoading]   = useState(false);
   const [fStatus, setFStatus]   = useState({});
@@ -418,7 +419,7 @@ export default function TrendRadar() {
 
   // ─── 사이드바 컴포넌트 ───────────────────────────────────
   const Sidebar = () => (
-    <aside style={{
+    <aside ref={sidebarRef} style={{
       width:320, flexShrink:0,
       borderRight:`1px solid ${C.b}`,
       background:C.bg1,
@@ -483,11 +484,11 @@ export default function TrendRadar() {
         return (
           <div key={grp.id}>
             <button className={`sbi${isOn?" on":""}`}
-              onClick={(e)=>{
+              onClick={()=>{
                 setSrcGroup(grp.id); setSrcDetail(null);
                 if (grp.sources.length) {
                   const isOpen = openSrc[grp.id];
-                  const aside = e.currentTarget.closest('aside');
+                  const aside = sidebarRef.current;
                   const savedScroll = aside ? aside.scrollTop : 0;
                   setOpenSrc({[grp.id]: !isOpen});
                   setTimeout(()=>{ if(aside) aside.scrollTop = savedScroll; }, 0);
@@ -560,13 +561,12 @@ export default function TrendRadar() {
         return (
           <div key={cat.id}>
             <div className={`cat-main${isOn?" on":""}`}
-              onClick={(e)=>{
+              onClick={()=>{
                 const isCurrentlyOpen = openCats[cat.id];
-                const aside = e.currentTarget.closest('aside');
+                const aside = sidebarRef.current;
                 const savedScroll = aside ? aside.scrollTop : 0;
                 setOpenCats({[cat.id]: !isCurrentlyOpen});
                 setCatId(cat.id);
-                // 열기/닫기 모두 스크롤 위치 고정
                 setTimeout(()=>{ if(aside) aside.scrollTop = savedScroll; }, 0);
                 requestAnimationFrame(()=>{ if(aside) aside.scrollTop = savedScroll; });
               }}
