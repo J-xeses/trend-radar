@@ -375,31 +375,31 @@ export default function TrendRadar() {
     button{cursor:pointer;transition:all .15s}
 
     /* ── 사이드바 아이템 ── */
-    .sbi{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;font-size:13px;font-weight:600;color:${C.ts};cursor:pointer;transition:all .15s;position:relative;user-select:none;border:1px solid transparent;background:none;width:100%;text-align:left}
-    .sbi:hover{background:rgba(255,255,255,.04);color:${C.t}}
-    .sbi.on{font-weight:700}
-    .sbi.on::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:2px;height:20px;border-radius:0 3px 3px 0}
+    .sbi{display:flex;align-items:center;gap:11px;padding:10px 14px;border-radius:10px;font-size:14px;font-weight:600;color:${C.ts};cursor:pointer;transition:all .15s;position:relative;user-select:none;border:1px solid ${C.b};background:${C.bg2};width:100%;text-align:left;margin-bottom:3px}
+    .sbi:hover{background:${C.bg3};border-color:${C.b2};color:${C.t}}
+    .sbi.on{font-weight:700;border-color:transparent}
+    .sbi.on::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:22px;border-radius:0 3px 3px 0}
 
     /* ── 소스 세부 ── */
-    .src-sub{display:flex;align-items:center;gap:9px;padding:7px 10px 7px 30px;border-radius:9px;font-size:12px;font-weight:500;color:${C.tm};cursor:pointer;transition:all .15s}
-    .src-sub:hover{background:rgba(255,255,255,.04);color:${C.ts}}
-    .src-sub.on{font-weight:700}
+    .src-sub{display:flex;align-items:center;gap:9px;padding:8px 12px 8px 32px;border-radius:9px;font-size:13px;font-weight:500;color:${C.tm};cursor:pointer;transition:all .15s;border:1px solid transparent;margin-bottom:2px}
+    .src-sub:hover{background:${C.bg3};border-color:${C.b};color:${C.ts}}
+    .src-sub.on{font-weight:700;background:${C.bg3};border-color:${C.b}}
 
     /* ── 카테고리 ── */
-    .cat-main{display:flex;align-items:center;gap:9px;padding:8px 12px;border-radius:10px;font-size:13px;font-weight:600;color:${C.ts};cursor:pointer;transition:all .15s;user-select:none}
-    .cat-main:hover{background:rgba(255,255,255,.04);color:${C.t}}
-    .cat-main.on{font-weight:700}
-    .cat-sub{padding:6px 10px 6px 38px;border-radius:8px;font-size:12px;color:${C.tm};cursor:pointer;transition:all .15s}
-    .cat-sub:hover{background:rgba(255,255,255,.04);color:${C.ts}}
+    .cat-main{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;font-size:14px;font-weight:600;color:${C.ts};cursor:pointer;transition:all .15s;user-select:none;border:1px solid ${C.b};background:${C.bg2};margin-bottom:3px}
+    .cat-main:hover{background:${C.bg3};border-color:${C.b2};color:${C.t}}
+    .cat-main.on{font-weight:700;border-color:transparent}
+    .cat-sub{padding:8px 12px 8px 40px;border-radius:9px;font-size:13px;color:${C.tm};cursor:pointer;transition:all .15s;border:1px solid transparent;margin-bottom:2px}
+    .cat-sub:hover{background:${C.bg3};border-color:${C.b};color:${C.ts}}
     .cat-sub.on{font-weight:700}
 
     /* ── 필 버튼 ── */
-    .pill{padding:6px 13px;border-radius:20px;font-size:12px;font-weight:600;border:1px solid ${C.b};background:none;color:${C.tm};cursor:pointer;transition:all .15s;white-space:nowrap}
-    .pill:hover{border-color:${C.b2};color:${C.ts}}
+    .pill{padding:7px 14px;border-radius:10px;font-size:13px;font-weight:600;border:1px solid ${C.b};background:${C.bg2};color:${C.tm};cursor:pointer;transition:all .15s;white-space:nowrap}
+    .pill:hover{background:${C.bg3};border-color:${C.b2};color:${C.ts}}
     .pill.on{border-color:transparent}
 
     /* ── 섹션 라벨 ── */
-    .sec-lbl{font-size:10px;font-weight:800;letter-spacing:.12em;color:${C.tm};padding:0 4px;margin:18px 0 10px;display:flex;align-items:center;gap:8px}
+    .sec-lbl{font-size:10px;font-weight:800;letter-spacing:.12em;color:${C.tm};padding:0 4px;margin:16px 0 8px;display:flex;align-items:center;gap:8px}
     .sec-lbl:first-child{margin-top:4px}
     .sec-lbl-bar{flex:1;height:1px;background:${C.b}}
 
@@ -419,7 +419,7 @@ export default function TrendRadar() {
   // ─── 사이드바 컴포넌트 ───────────────────────────────────
   const Sidebar = () => (
     <aside style={{
-      width:280, flexShrink:0,
+      width:320, flexShrink:0,
       borderRight:`1px solid ${C.b}`,
       background:C.bg1,
       position:"sticky", top:56,
@@ -450,7 +450,7 @@ export default function TrendRadar() {
 
       {/* 1. 지역 */}
       <div className="sec-lbl">📍 지역<div className="sec-lbl-bar"/></div>
-      <div style={{display:"flex",flexWrap:"wrap",gap:5,padding:"0 2px",marginBottom:4}}>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:5,padding:"0 2px",marginBottom:4}}>
         {REGIONS.map(r=>(
           <button key={r.id} className={`pill${region===r.id?" on":""}`}
             onClick={()=>setRegion(r.id)}
@@ -462,7 +462,7 @@ export default function TrendRadar() {
 
       {/* 2. 기간 */}
       <div className="sec-lbl">📅 기간<div className="sec-lbl-bar"/></div>
-      <div style={{display:"flex",flexWrap:"wrap",gap:5,padding:"0 2px",marginBottom:4}}>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:5,padding:"0 2px",marginBottom:4}}>
         {PERIODS.map(p=>(
           <button key={p.id} className={`pill${period===p.id?" on":""}`}
             onClick={()=>setPeriod(p.id)}
@@ -485,12 +485,16 @@ export default function TrendRadar() {
             <button className={`sbi${isOn?" on":""}`}
               onClick={()=>{
                 setSrcGroup(grp.id); setSrcDetail(null);
-                if (grp.sources.length) setOpenSrc(p=>({...p,[grp.id]:!p[grp.id]}));
+                if (grp.sources.length) {
+                  // 아코디언: 다른 그룹 닫고 현재만 토글
+                  const isOpen = openSrc[grp.id];
+                  setOpenSrc({[grp.id]: !isOpen});
+                }
               }}
               style={{
                 color: isOn ? grp.color : C.ts,
-                background: isOn ? `${grp.color}12` : undefined,
-                borderColor: isOn ? `${grp.color}25` : "transparent",
+                background: isOn ? `${grp.color}18` : C.bg2,
+                borderColor: isOn ? grp.color+"40" : C.b,
               }}
             >
               {isOn && <div style={{
@@ -540,7 +544,7 @@ export default function TrendRadar() {
       {/* 전체 */}
       <div className={`cat-main${catId==="all"?" on":""}`}
         onClick={()=>{setCatId("all");setOpenCats({});}}
-        style={{color:catId==="all"?C.ac2:C.ts, background:catId==="all"?C.acd:undefined}}>
+        style={{color:catId==="all"?C.ac2:C.ts, background:catId==="all"?C.acd:C.bg2, borderColor:catId==="all"?C.acb:C.b}}>
         <span style={{fontSize:16}}>🌐</span>
         <span style={{flex:1}}>전체</span>
         <span style={{fontSize:10,fontFamily:C.m,color:C.tm}}>{items.length}</span>
@@ -553,8 +557,10 @@ export default function TrendRadar() {
           <div key={cat.id}>
             <div className={`cat-main${isOn?" on":""}`}
               onClick={()=>{
+                const isCurrentlyOpen = openCats[cat.id];
+                // 다른 카테고리 모두 닫고 현재만 토글 (아코디언)
+                setOpenCats({[cat.id]: !isCurrentlyOpen});
                 setCatId(cat.id);
-                setOpenCats(p=>({...p,[cat.id]:!p[cat.id]}));
               }}
               style={{color:isOn?cat.color:C.ts, background:isOn?`${cat.color}12`:undefined}}
             >
@@ -579,7 +585,7 @@ export default function TrendRadar() {
 
       {/* 5. 열기 */}
       <div className="sec-lbl">🔥 열기<div className="sec-lbl-bar"/></div>
-      <div style={{display:"flex",flexWrap:"wrap",gap:5,padding:"0 2px"}}>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:5,padding:"0 2px"}}>
         {HEATS.map(h=>(
           <button key={h.id} className={`pill${heat===h.id?" on":""}`}
             onClick={()=>setHeat(h.id)}
@@ -591,7 +597,7 @@ export default function TrendRadar() {
 
       {/* 6. 정렬 */}
       <div className="sec-lbl">📊 정렬<div className="sec-lbl-bar"/></div>
-      <div style={{display:"flex",flexWrap:"wrap",gap:5,padding:"0 2px"}}>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:5,padding:"0 2px"}}>
         {[{id:"score",l:"트렌드점수"},{id:"recent",l:"최신순"},{id:"heat",l:"열기순"}].map(s=>(
           <button key={s.id} className={`pill${sortBy===s.id?" on":""}`}
             onClick={()=>setSortBy(s.id)}
@@ -633,7 +639,7 @@ export default function TrendRadar() {
           >
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
               <div style={{
-                width:32,height:32,borderRadius:9,
+                width:36,height:36,borderRadius:10,
                 background: isOn ? `${at.color}20` : C.bg3,
                 display:"flex",alignItems:"center",justifyContent:"center",
                 flexShrink:0,
@@ -1256,13 +1262,13 @@ export default function TrendRadar() {
           {/* 로고 */}
           <div style={{display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
             <div style={{
-              width:32,height:32,borderRadius:9,
+              width:36,height:36,borderRadius:10,
               background:`linear-gradient(135deg,${C.ac},#c084fc)`,
               display:"flex",alignItems:"center",justifyContent:"center",
             }}>
-              <Ic n="trend" s={16} c="#fff"/>
+              <Ic n="trend" s={18} c="#fff"/>
             </div>
-            <span style={{fontSize:15,fontWeight:800,letterSpacing:"-.04em",color:C.t}}>
+            <span style={{fontSize:18,fontWeight:800,letterSpacing:"-.04em",color:C.t}}>
               TREND RADAR
             </span>
             <span style={{
