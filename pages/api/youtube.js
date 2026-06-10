@@ -5,15 +5,15 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
 
-  const { type, ids } = req.query;
+  const { type, ids, region } = req.query;
   const YT_KEY = process.env.YOUTUBE_API_KEY;
+  const regionCode = region || "KR";
 
   try {
     if (type === "trending") {
-      if (!YT_KEY) {
-        return res.status(200).json({ xml: "", error: "YOUTUBE_API_KEY not set" });
-      }
-      const url = "https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&chart=mostPopular&regionCode=KR&hl=ko_KR&maxResults=25&key=" + YT_KEY;
+      if (!YT_KEY) return res.status(200).json({ xml: "", error: "YOUTUBE_API_KEY not set" });
+
+      const url = "https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&chart=mostPopular&regionCode=" + regionCode + "&hl=ko_KR&maxResults=25&key=" + YT_KEY;
       const r = await fetch(url);
       if (!r.ok) {
         const err = await r.json();
@@ -30,7 +30,7 @@ export default async function handler(req, res) {
         return "<entry><id>yt:video:" + id + "</id><title>" + title + "</title><link href=\"https://www.youtube.com/watch?v=" + id + "\"/><published>" + published + "</published><author><name>" + channel + "</name></author><media:statistics views=\"" + views + "\"/></entry>";
       }).join("\n");
       const xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><feed xmlns:yt=\"http://www.youtube.com/xml/schemas/2015\" xmlns:media=\"http://search.yahoo.com/mrss\">" + entries + "</feed>";
-      return res.status(200).json({ xml, count: items.length });
+      return res.status(200).json({ xml, count: items.length, region: regionCode });
     }
 
     if (type === "channels" && ids) {
