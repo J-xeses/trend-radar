@@ -486,9 +486,13 @@ export default function TrendRadar() {
               onClick={()=>{
                 setSrcGroup(grp.id); setSrcDetail(null);
                 if (grp.sources.length) {
-                  // 아코디언: 다른 그룹 닫고 현재만 토글
                   const isOpen = openSrc[grp.id];
+                  const aside = e.currentTarget.closest('aside');
+                  const scrollTop = aside?.scrollTop || 0;
                   setOpenSrc({[grp.id]: !isOpen});
+                  requestAnimationFrame(()=>{
+                    if(aside) aside.scrollTop = scrollTop;
+                  });
                 }
               }}
               style={{
@@ -556,11 +560,18 @@ export default function TrendRadar() {
         return (
           <div key={cat.id}>
             <div className={`cat-main${isOn?" on":""}`}
-              onClick={()=>{
+              onClick={(e)=>{
                 const isCurrentlyOpen = openCats[cat.id];
-                // 다른 카테고리 모두 닫고 현재만 토글 (아코디언)
+                // 클릭한 요소 위치 고정 (스크롤 점프 방지)
+                const el = e.currentTarget;
+                const scrollTop = el.closest('aside')?.scrollTop || 0;
+                const elTop = el.offsetTop;
                 setOpenCats({[cat.id]: !isCurrentlyOpen});
                 setCatId(cat.id);
+                requestAnimationFrame(()=>{
+                  const aside = el.closest('aside');
+                  if(aside) aside.scrollTop = scrollTop;
+                });
               }}
               style={{color:isOn?cat.color:C.ts, background:isOn?`${cat.color}12`:undefined}}
             >
