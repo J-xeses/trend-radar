@@ -1,31 +1,36 @@
 // pages/api/producthunt.js
-// ProductHunt RSS 피드 파싱 (무료, 키 불필요)
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
-
   try {
-    const response = await fetch("https://www.producthunt.com/feed", {
-      headers: { "User-Agent": "Mozilla/5.0 TrendRadar/1.0" }
+    const r = await fetch("https://www.producthunt.com/feed", {
+      headers: { "User-Agent": "Mozilla/5.0" }
     });
-    if (!response.ok) throw new Error("ProductHunt RSS fetch failed: " + response.status);
+    if (!r.ok) throw new Error("fetch failed: " + r.status);
+    const xml = await r.text();
 
-    const xml = await response.text();
+    // 태그 추출 헬퍼
+    function getTag(str, tag) {
+      const open = "<" + tag + ">";
+      const close = "</" + tag + ">";
+      const s = str.indexOf(open);
+      const e = str.indexOf(close);
+      if (s === -1 || e === -1) return "";
+      let val = str.slice(s + open.length, e).trim();
+      // CDATA 제거
+      val = val.replace(/^<!\[CDATA\[/, "").replace(/\]\]>$/, "");
+      return val;
+    }
 
-    // 간단한 RSS 파싱
     const items = [];
-    const itemRegex = /<item>([\s\S]*?)<\/item>/g;
-    let match;
-    while ((match = itemRegex.exec(xml)) !== null) {
-      const block = match[1];
-      const title   = (block.match(/<title><![CDATA[([\s\S]*?)]]><\/title>/) ||
-                       block.match(/<title>(.*?)<\/title>/))?.[1]?.trim() || "";
-      const url     = (block.match(/<link>(.*?)<\/link>/))?.[1]?.trim() || "";
-      const desc    = (block.match(/<description><![CDATA[([\s\S]*?)]]><\/description>/) ||
-                       block.match(/<description>(.*?)<\/description>/))?.[1]?.trim() || "";
-      const pubDate = (block.match(/<pubDate>(.*?)<\/pubDate>/))?.[1]?.trim() || "";
-
-      if (title) items.push({ title, url, description: desc.substring(0,100), pubDate });
+    const parts = xml.split("<item>");
+    for (let i = 1; i < parts.length; i++) {
+      const block = parts[i].split("</item>")[0];
+      const title = getTag(block, "title");
+      const link  = getTag(block, "link");
+      const desc  = getTag(block, "description").substring(0, 100);
+      const date  = getTag(block, "pubDate");
+      if (title) items.push({ title, url: link, description: desc, pubDate: date });
     }
 
     return res.status(200).json({ items: items.slice(0, 15) });
