@@ -1,4 +1,5 @@
 // pages/api/youtube.js
+// YouTube Data API v3 — 급상승 영상 수집
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS");
@@ -6,59 +7,55 @@ export default async function handler(req, res) {
   if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
 
   const { type, ids } = req.query;
+  const YT_KEY = process.env.YOUTUBE_API_KEY;
 
   try {
+    // ── 급상승 영상 (Data API v3) ──────────────────────────
     if (type === "trending") {
-      // 여러 User-Agent와 URL 조합 시도
-      const attempts = [
-        {
-          url: "https://www.youtube.com/feeds/videos.xml?chart=mostPopular&regionCode=KR&hl=ko_KR&maxResults=20",
-          headers: {
-            "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
-            "Accept": "application/xml,text/xml,*/*",
-            "Accept-Language": "ko-KR,ko;q=0.9",
-          }
-        },
-        {
-          url: "https://www.youtube.com/feeds/videos.xml?chart=mostPopular&regionCode=KR&maxResults=20",
-          headers: {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            "Accept": "text/xml,application/xml",
-          }
-        },
-        {
-          url: "https://www.youtube.com/feeds/videos.xml?chart=mostPopular&regionCode=KR",
-          headers: { "User-Agent": "feedparser/6.0" }
-        },
-      ];
-
-      let xml = null;
-      let lastErr = "";
-
-      for (const attempt of attempts) {
-        try {
-          const r = await fetch(attempt.url, { headers: attempt.headers });
-          if (r.ok) {
-            const text = await r.text();
-            if (text.includes("<entry>")) {
-              xml = text;
-              break;
-            }
-          }
-          lastErr = `status ${r.status}`;
-        } catch(e) {
-          lastErr = e.message;
-        }
+      if (!YT_KEY) {
+        return res.status(200).json({ xml: "", error: "YOUTUBE_API_KEY not set" });
       }
 
-      if (xml) {
-        return res.status(200).json({ xml });
-      } else {
-        // fallback: 빈 XML 반환 (에러 대신)
-        return res.status(200).json({ xml: "", error: "YouTube blocked: " + lastErr });
+      const url = `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&chart=mostPopular&regionCode=KR&hl=ko_KR&maxResults=25&key=${YT_KEY}`;
+      const r = await fetch(url);
+      if (!r.ok) {
+        const err = await r.json();
+        throw new Error(err?.error?.message || "YouTube API error: " + r.status);
       }
+
+      const data = await r.json();
+      const items = data.items || [];
+
+      // RSS XML 형식으로 변환 (기존 파싱 코드 호환)
+      const entries = items.map(item => {
+        const id = item.id;
+        const title = item.snippet?.title || "";
+        const channel = item.snippet?.channelTitle || "";
+        const published = item.snippet?.publishedAt || new Date().toISOString();
+        const views = item.statistics?.viewCount || "0";
+        const likes = item.statistics?.likeCount || "0";
+        return `<entry>
+  <id>yt:video:${id}</id>
+  <title>${title.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}</title>
+  <link href="https://www.youtube.com/watch?v=${id}"/>
+  <published>${published}</published>
+  <author><name>${channel.replace(/&/g,"&amp;")}</name></author>
+  <media:statistics views="${views}"/>
+  <yt:likes>${likes}</yt:likes>
+</entry>`;
+      }).join("
+");
+
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns:yt="http://www.youtube.com/xml/schemas/2015"
+      xmlns:media="http://search.yahoo.com/mrss/">
+${entries}
+</feed>`;
+
+      return res.status(200).json({ xml, count: items.length });
     }
 
+    // ── 채널 영상 (RSS — 채널은 API 키 불필요) ────────────
     if (type === "channels" && ids) {
       const channelIds = ids.split(",").slice(0, 10);
       const results = await Promise.all(
