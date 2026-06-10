@@ -425,9 +425,14 @@ export default function TrendRadar() {
       background:C.bg1,
       position:"sticky", top:56,
       height:"calc(100vh - 56px)",
-      overflowY:"auto",
-      padding:"14px 12px 24px",
-      display:"flex", flexDirection:"column", gap:0,
+      overflowY:"hidden",
+      display:"flex", flexDirection:"column",
+      padding:0,
+    }}>
+    {/* 스크롤 없는 고정 영역 */}
+    <div style={{
+      flexShrink:0, padding:"14px 12px 0",
+      overflowY:"visible",
     }}>
 
       {/* 검색 */}
@@ -544,6 +549,13 @@ export default function TrendRadar() {
         );
       })}
 
+    </div>{/* /고정영역 */}
+
+    {/* 스크롤 가능한 카테고리+열기+정렬 영역 */}
+    <div style={{
+      flex:1, overflowY:"auto", padding:"0 12px 24px",
+      scrollbarWidth:"thin",
+    }}>
       {/* 4. 카테고리 */}
       <div className="sec-lbl">📁 카테고리<div className="sec-lbl-bar"/></div>
       {/* 전체 */}
@@ -563,12 +575,8 @@ export default function TrendRadar() {
             <div className={`cat-main${isOn?" on":""}`}
               onClick={()=>{
                 const isCurrentlyOpen = openCats[cat.id];
-                const aside = sidebarRef.current;
-                const savedScroll = aside ? aside.scrollTop : 0;
                 setOpenCats({[cat.id]: !isCurrentlyOpen});
                 setCatId(cat.id);
-                setTimeout(()=>{ if(aside) aside.scrollTop = savedScroll; }, 0);
-                requestAnimationFrame(()=>{ if(aside) aside.scrollTop = savedScroll; });
               }}
               style={{color:isOn?cat.color:C.ts, background:isOn?`${cat.color}12`:undefined}}
             >
@@ -615,6 +623,7 @@ export default function TrendRadar() {
         ))}
       </div>
 
+    </div>{/* /스크롤영역 */}
     </aside>
   );
 
