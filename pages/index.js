@@ -382,17 +382,17 @@ export default function TrendRadar() {
     .sbi.on::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:22px;border-radius:0 3px 3px 0}
 
     /* ── 소스 세부 ── */
-    .src-sub{display:flex;align-items:center;gap:9px;padding:8px 12px 8px 32px;border-radius:9px;font-size:13px;font-weight:500;color:${C.tm};cursor:pointer;transition:all .15s;border:1px solid transparent;margin-bottom:2px}
-    .src-sub:hover{background:${C.bg3};border-color:${C.b};color:${C.ts}}
-    .src-sub.on{font-weight:700;background:${C.bg3};border-color:${C.b}}
+    .src-sub{display:flex;align-items:center;gap:9px;padding:9px 12px 9px 32px;border-radius:9px;font-size:13px;font-weight:500;color:${C.tm};cursor:pointer;transition:all .2s;border:1px solid transparent;margin-bottom:3px}
+    .src-sub:hover{background:${C.bg3};border-color:${C.b2};color:#ffffff;font-weight:600;text-shadow:0 0 12px rgba(255,255,255,.6),0 0 24px rgba(167,139,250,.4)}
+    .src-sub.on{font-weight:700;background:${C.bg3};border-color:${C.b};color:${C.ts}}
 
     /* ── 카테고리 ── */
     .cat-main{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;font-size:14px;font-weight:600;color:${C.ts};cursor:pointer;transition:all .15s;user-select:none;border:1px solid ${C.b};background:${C.bg2};margin-bottom:3px}
     .cat-main:hover{background:${C.bg3};border-color:${C.b2};color:${C.t}}
     .cat-main.on{font-weight:700;border-color:transparent}
-    .cat-sub{padding:8px 12px 8px 40px;border-radius:9px;font-size:13px;color:${C.tm};cursor:pointer;transition:all .15s;border:1px solid transparent;margin-bottom:2px}
-    .cat-sub:hover{background:${C.bg3};border-color:${C.b};color:${C.ts}}
-    .cat-sub.on{font-weight:700}
+    .cat-sub{padding:9px 12px 9px 40px;border-radius:9px;font-size:13px;color:${C.tm};cursor:pointer;transition:all .2s;border:1px solid transparent;margin-bottom:3px}
+    .cat-sub:hover{background:${C.bg3};border-color:${C.b2};color:#ffffff;font-weight:600;text-shadow:0 0 12px rgba(255,255,255,.6),0 0 24px rgba(167,139,250,.4);letter-spacing:.01em}
+    .cat-sub.on{font-weight:700;color:${C.t}}
 
     /* ── 필 버튼 ── */
     .pill{padding:7px 14px;border-radius:10px;font-size:13px;font-weight:600;border:1px solid ${C.b};background:${C.bg2};color:${C.tm};cursor:pointer;transition:all .15s;white-space:nowrap}
