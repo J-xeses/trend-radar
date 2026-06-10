@@ -257,22 +257,19 @@ export default function TrendRadar() {
           st.hackernews = { ok:true, n:parsed.length };
         }).catch(e => { st.hackernews = { ok:false, n:0, err:e.message }; }),
 
-      // ── 3. Reddit (공개 JSON API, 무료) ──────────────────
-      fetch("https://www.reddit.com/r/technology+MachineLearning+artificial+programming.json?limit=25", {
-        headers: { "User-Agent": "TrendRadar/1.0" }
-      }).then(r=>r.json())
+      // ── 3. Reddit (서버 사이드 API) ──────────────────────
+      fetch("/api/reddit")
+        .then(r=>r.json())
         .then(d => {
-          const posts = d?.data?.children||[];
-          const parsed = posts
-            .filter(p => p.data?.title && !p.data?.over_18)
-            .map(p => ({
-              id:`rd_${p.data.id}`, source:"reddit",
-              title: p.data.title,
-              url:   `https://reddit.com${p.data.permalink}`,
-              score: Math.min(100, Math.round((p.data.score||0)/150)),
-              time:  new Date((p.data.created_utc||0)*1000).toISOString(),
-              extra: { upvotes:p.data.score, comments:p.data.num_comments, sub:p.data.subreddit }
-            }));
+          const posts = d?.posts||[];
+          const parsed = posts.map(p => ({
+            id:`rd_${p.id}`, source:"reddit",
+            title: p.title,
+            url:   p.url,
+            score: p.score,
+            time:  p.time,
+            extra: { upvotes:p.upvotes, comments:p.comments, sub:p.subreddit }
+          }));
           all.push(...parsed);
           st.reddit = { ok:true, n:parsed.length };
         }).catch(e => { st.reddit = { ok:false, n:0, err:e.message }; }),
@@ -295,19 +292,21 @@ export default function TrendRadar() {
           st.github = { ok:true, n:parsed.length };
         }).catch(e => { st.github = { ok:false, n:0, err:e.message }; }),
 
-      // ── 5. ProductHunt (공개 RSS, 무료) ──────────────────
+      // ── 5. ProductHunt (RSS via server) ──────────────────
       fetch("/api/producthunt")
         .then(r=>r.json())
         .then(d => {
           const items2 = d?.items||[];
-          const parsed = items2.map((item,i) => ({
-            id:`ph_${i}_${Date.now()}`, source:"producthunt",
-            title: item.title||"",
-            url:   item.url||"",
-            score: Math.max(20, 70 - i*3),
-            time:  item.pubDate||new Date().toISOString(),
-            extra: { tagline: item.description||"" }
-          }));
+          const parsed = items2
+            .filter(item => item.title)
+            .map((item,i) => ({
+              id:`ph_${i}_${Date.now()}`, source:"producthunt",
+              title: item.title,
+              url:   item.url || item.link || "",
+              score: Math.max(30, 80 - i*3),
+              time:  item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString(),
+              extra: { tagline: item.description||"" }
+            }));
           all.push(...parsed);
           st.producthunt = { ok:true, n:parsed.length };
         }).catch(e => { st.producthunt = { ok:false, n:0, err:e.message }; }),
