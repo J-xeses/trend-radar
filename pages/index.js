@@ -483,15 +483,15 @@ export default function TrendRadar() {
         return (
           <div key={grp.id}>
             <button className={`sbi${isOn?" on":""}`}
-              onClick={()=>{
+              onClick={(e)=>{
                 setSrcGroup(grp.id); setSrcDetail(null);
                 if (grp.sources.length) {
                   const isOpen = openSrc[grp.id];
                   const aside = e.currentTarget.closest('aside');
-                  const scrollTop = aside?.scrollTop || 0;
+                  const savedScroll = aside ? aside.scrollTop : 0;
                   setOpenSrc({[grp.id]: !isOpen});
-                  requestAnimationFrame(()=>{
-                    if(aside) aside.scrollTop = scrollTop;
+                  setTimeout(()=>{ if(aside) aside.scrollTop = savedScroll; }, 0);
+                  requestAnimationFrame(()=>{ if(aside) aside.scrollTop = scrollTop;
                   });
                 }
               }}
@@ -562,16 +562,13 @@ export default function TrendRadar() {
             <div className={`cat-main${isOn?" on":""}`}
               onClick={(e)=>{
                 const isCurrentlyOpen = openCats[cat.id];
-                // 클릭한 요소 위치 고정 (스크롤 점프 방지)
-                const el = e.currentTarget;
-                const scrollTop = el.closest('aside')?.scrollTop || 0;
-                const elTop = el.offsetTop;
+                const aside = e.currentTarget.closest('aside');
+                const savedScroll = aside ? aside.scrollTop : 0;
                 setOpenCats({[cat.id]: !isCurrentlyOpen});
                 setCatId(cat.id);
-                requestAnimationFrame(()=>{
-                  const aside = el.closest('aside');
-                  if(aside) aside.scrollTop = scrollTop;
-                });
+                // 열기/닫기 모두 스크롤 위치 고정
+                setTimeout(()=>{ if(aside) aside.scrollTop = savedScroll; }, 0);
+                requestAnimationFrame(()=>{ if(aside) aside.scrollTop = savedScroll; });
               }}
               style={{color:isOn?cat.color:C.ts, background:isOn?`${cat.color}12`:undefined}}
             >
