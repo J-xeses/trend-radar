@@ -731,7 +731,7 @@ export default function TrendRadarV5() {
         .sec-hd-accent{width:3px;height:20px;border-radius:3px}
         .sec-hd-title{font-size:14px;font-weight:800;color:${T.t};letter-spacing:-.04em}
         .sec-hd-sub{font-size:9px;font-family:${T.m};color:${T.tm};letter-spacing:.03em}
-      \`}</style>
+      `}</style>
 
       {showApiModal&&<ApiKeyModal onSave={saveApiKey} onSkip={()=>setShowApiModal(false)}/>}
 
