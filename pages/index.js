@@ -203,62 +203,109 @@ export default function TrendRadar() {
   const fetchAll = useCallback(async () => {
     setLoading(true);
     const all = [], st = {};
-    await Promise.allSettled([
-      fetch("/api/youtube?type=trending").then(r => r.json()).then(d => {
-        try {
-          const xml = new DOMParser().parseFromString(d.xml||"","text/xml");
-          const entries = Array.from(xml.querySelectorAll("entry"));
-          const parsed = entries.slice(0,25).map((e,i) => ({
-            id:`yt_${i}`,source:"youtube_kr",
-            title: e.querySelector("title")?.textContent||"",
-            url:   e.querySelector("link")?.getAttribute("href")||"",
-            score: Math.max(20,90-i*2.5),
-            time:  e.querySelector("published")?.textContent||"",
-            extra: { channel: e.querySelector("author name")?.textContent||"" }
-          }));
-          all.push(...parsed);
-          st.youtube_kr = { ok:true, n:parsed.length };
-        } catch { st.youtube_kr = { ok:false, n:0 }; }
-      }).catch(() => { st.youtube_kr = { ok:false, n:0 }; }),
 
+    await Promise.allSettled([
+
+      // ── 1. 유튜브 급상승 (RSS, 무료) ──────────────────────
+      fetch("/api/youtube?type=trending")
+        .then(r => r.json())
+        .then(d => {
+          try {
+            const xml = new DOMParser().parseFromString(d.xml||"","text/xml");
+            const entries = Array.from(xml.querySelectorAll("entry"));
+            const parsed = entries.slice(0,25).map((e,i) => ({
+              id:`yt_${Date.now()}_${i}`, source:"youtube_kr",
+              title: e.querySelector("title")?.textContent||"",
+              url:   e.querySelector("link")?.getAttribute("href")||"",
+              score: Math.max(20, 90 - i*2.5),
+              time:  e.querySelector("published")?.textContent||"",
+              extra: { channel: e.querySelector("author name")?.textContent||"" }
+            }));
+            all.push(...parsed);
+            st.youtube_kr = { ok:true, n:parsed.length };
+          } catch(e) { st.youtube_kr = { ok:false, n:0, err:e.message }; }
+        }).catch(e => { st.youtube_kr = { ok:false, n:0, err:e.message }; }),
+
+      // ── 2. HackerNews Top Stories (Firebase API, 무료) ────
       fetch("https://hacker-news.firebaseio.com/v0/topstories.json")
         .then(r => r.json())
         .then(async ids => {
-          const top = (ids||[]).slice(0,15);
+          const top = (ids||[]).slice(0, 20);
           const stories = await Promise.all(
             top.map(id =>
               fetch(`https://hacker-news.firebaseio.com/v0/item/${id}.json`)
                 .then(r=>r.json()).catch(()=>null)
             )
           );
-          const parsed = stories.filter(Boolean).map((s,i) => ({
-            id:`hn_${s.id}`,source:"hackernews",
-            title: s.title||"",
-            url:   s.url||`https://news.ycombinator.com/item?id=${s.id}`,
-            score: Math.min(100,Math.round((s.score||0)/30)),
+          const parsed = stories.filter(s=>s&&s.title&&s.type==='story').map(s => ({
+            id:`hn_${s.id}`, source:"hackernews",
+            title: s.title,
+            url:   s.url || `https://news.ycombinator.com/item?id=${s.id}`,
+            score: Math.min(100, Math.round((s.score||0)/25)),
             time:  new Date((s.time||0)*1000).toISOString(),
-            extra: { points:s.score, comments:s.descendants }
+            extra: { points:s.score, comments:s.descendants||0 }
           }));
           all.push(...parsed);
           st.hackernews = { ok:true, n:parsed.length };
-        }).catch(() => { st.hackernews = {ok:false,n:0}; }),
+        }).catch(e => { st.hackernews = { ok:false, n:0, err:e.message }; }),
 
-      fetch("https://www.reddit.com/r/technology+programming+artificial.json?limit=20")
-        .then(r=>r.json())
+      // ── 3. Reddit (공개 JSON API, 무료) ──────────────────
+      fetch("https://www.reddit.com/r/technology+MachineLearning+artificial+programming.json?limit=25", {
+        headers: { "User-Agent": "TrendRadar/1.0" }
+      }).then(r=>r.json())
         .then(d => {
           const posts = d?.data?.children||[];
-          const parsed = posts.map((p,i) => ({
-            id:`rd_${p.data?.id}`,source:"reddit",
-            title: p.data?.title||"",
-            url:   `https://reddit.com${p.data?.permalink}`,
-            score: Math.min(100,Math.round((p.data?.score||0)/200)),
-            time:  new Date((p.data?.created_utc||0)*1000).toISOString(),
-            extra: { upvotes:p.data?.score, comments:p.data?.num_comments, sub:p.data?.subreddit }
-          }));
+          const parsed = posts
+            .filter(p => p.data?.title && !p.data?.over_18)
+            .map(p => ({
+              id:`rd_${p.data.id}`, source:"reddit",
+              title: p.data.title,
+              url:   `https://reddit.com${p.data.permalink}`,
+              score: Math.min(100, Math.round((p.data.score||0)/150)),
+              time:  new Date((p.data.created_utc||0)*1000).toISOString(),
+              extra: { upvotes:p.data.score, comments:p.data.num_comments, sub:p.data.subreddit }
+            }));
           all.push(...parsed);
           st.reddit = { ok:true, n:parsed.length };
-        }).catch(() => { st.reddit={ok:false,n:0}; }),
+        }).catch(e => { st.reddit = { ok:false, n:0, err:e.message }; }),
+
+      // ── 4. GitHub Trending (공개 Search API, 무료) ────────
+      fetch("https://api.github.com/search/repositories?q=created:>2025-01-01+stars:>100&sort=stars&order=desc&per_page=20", {
+        headers: { "Accept": "application/vnd.github.v3+json" }
+      }).then(r=>r.json())
+        .then(d => {
+          const repos = d?.items||[];
+          const parsed = repos.map(r => ({
+            id:`gh_${r.id}`, source:"github",
+            title: `${r.full_name} — ${r.description||"GitHub 트렌딩"}`,
+            url:   r.html_url,
+            score: Math.min(100, Math.round(Math.log10((r.stargazers_count||1)+1)*25)),
+            time:  r.updated_at||new Date().toISOString(),
+            extra: { stars:r.stargazers_count, lang:r.language, forks:r.forks_count }
+          }));
+          all.push(...parsed);
+          st.github = { ok:true, n:parsed.length };
+        }).catch(e => { st.github = { ok:false, n:0, err:e.message }; }),
+
+      // ── 5. ProductHunt (공개 RSS, 무료) ──────────────────
+      fetch("/api/producthunt")
+        .then(r=>r.json())
+        .then(d => {
+          const items2 = d?.items||[];
+          const parsed = items2.map((item,i) => ({
+            id:`ph_${i}_${Date.now()}`, source:"producthunt",
+            title: item.title||"",
+            url:   item.url||"",
+            score: Math.max(20, 70 - i*3),
+            time:  item.pubDate||new Date().toISOString(),
+            extra: { tagline: item.description||"" }
+          }));
+          all.push(...parsed);
+          st.producthunt = { ok:true, n:parsed.length };
+        }).catch(e => { st.producthunt = { ok:false, n:0, err:e.message }; }),
+
     ]);
+
     setItems(all);
     setFStatus(st);
     setLastFetch(new Date());
