@@ -383,7 +383,7 @@ export default function TrendRadar() {
 
     /* ── 소스 세부 ── */
     .src-sub{display:flex;align-items:center;gap:9px;padding:9px 12px 9px 32px;border-radius:9px;font-size:13px;font-weight:500;color:${C.tm};cursor:pointer;transition:all .2s;border:1px solid transparent;margin-bottom:3px}
-    .src-sub:hover{background:${C.bg3};border-color:${C.b2};color:#ffffff;font-weight:600;text-shadow:0 0 12px rgba(255,255,255,.6),0 0 24px rgba(167,139,250,.4)}
+    .src-sub:hover{background:rgba(167,139,250,.12);border-color:rgba(167,139,250,.3);color:#ffffff;font-weight:700}
     .src-sub.on{font-weight:700;background:${C.bg3};border-color:${C.b};color:${C.ts}}
 
     /* ── 카테고리 ── */
@@ -391,7 +391,7 @@ export default function TrendRadar() {
     .cat-main:hover{background:${C.bg3};border-color:${C.b2};color:${C.t}}
     .cat-main.on{font-weight:700;border-color:transparent}
     .cat-sub{padding:9px 12px 9px 40px;border-radius:9px;font-size:13px;color:${C.tm};cursor:pointer;transition:all .2s;border:1px solid transparent;margin-bottom:3px}
-    .cat-sub:hover{background:${C.bg3};border-color:${C.b2};color:#ffffff;font-weight:600;text-shadow:0 0 12px rgba(255,255,255,.6),0 0 24px rgba(167,139,250,.4);letter-spacing:.01em}
+    .cat-sub:hover{background:rgba(167,139,250,.12);border-color:rgba(167,139,250,.3);color:#ffffff;font-weight:700}
     .cat-sub.on{font-weight:700;color:${C.t}}
 
     /* ── 필 버튼 ── */
