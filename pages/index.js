@@ -501,15 +501,12 @@ export default function TrendRadar() {
       background:C.bg1,
       position:"sticky", top:56,
       height:"calc(100vh - 56px)",
-      overflowY:"hidden",
+      overflowY:"auto",
       display:"flex", flexDirection:"column",
       padding:0,
     }}>
-    {/* 스크롤 없는 고정 영역 */}
-    <div style={{
-      flexShrink:0, padding:"14px 12px 0",
-      overflowY:"visible",
-    }}>
+    {/* 전체 사이드바 콘텐츠 */}
+    <div style={{padding:"14px 12px 0"}}>
 
       {/* 검색 */}
       <div style={{
@@ -625,13 +622,8 @@ export default function TrendRadar() {
         );
       })}
 
-    </div>{/* /고정영역 */}
-
-    {/* 스크롤 가능한 카테고리+열기+정렬 영역 */}
-    <div style={{
-      flex:1, overflowY:"auto", padding:"0 12px 24px",
-      scrollbarWidth:"thin",
-    }}>
+    </div>
+    <div style={{padding:"0 12px 12px"}}>
       {/* 4. 카테고리 */}
       <div className="sec-lbl">📁 카테고리<div className="sec-lbl-bar"/></div>
       {/* 전체 */}
@@ -699,7 +691,7 @@ export default function TrendRadar() {
         ))}
       </div>
 
-    </div>{/* /스크롤영역 */}
+    </div>
     </aside>
   );
 
