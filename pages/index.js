@@ -715,7 +715,23 @@ export default function TrendRadarV5() {
 
         /* 트렌드 카드 스켈레톤 */
         .skeleton{background:linear-gradient(90deg,${T.c} 25%,${T.ch} 50%,${T.c} 75%);background-size:200% 100%;animation:shimmer 1.5s infinite}
-      `}</style>
+
+        /* ── 사이드바 ── */
+        .sb-title{font-size:10px;font-weight:800;color:${T.t};letter-spacing:.08em;padding:0 6px;margin:14px 0 6px;display:flex;align-items:center;gap:8px}
+        .sb-title:first-child{margin-top:0}
+        .sb-title-bar{flex:1;height:1px;background:${T.b2}}
+        .sitem{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:8px;font-size:11px;font-weight:600;color:${T.ts};cursor:pointer;transition:all .15s;position:relative}
+        .sitem:hover{background:rgba(255,255,255,.04);color:${T.t}}
+        .sitem.on{background:rgba(124,111,247,.1);font-weight:700}
+        .sitem.on::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:2px;height:18px;background:${T.ac};border-radius:0 2px 2px 0}
+        .snum{margin-left:auto;font-size:8px;font-family:${T.m};padding:1px 6px;border-radius:20px;background:rgba(255,255,255,.07);color:${T.tm}}
+        .shot{width:5px;height:5px;border-radius:50%;background:${T.r};margin-left:auto;animation:pulse 1s infinite}
+        .sec-hd{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 10px}
+        .sec-hd-left{display:flex;align-items:center;gap:10px}
+        .sec-hd-accent{width:3px;height:20px;border-radius:3px}
+        .sec-hd-title{font-size:14px;font-weight:800;color:${T.t};letter-spacing:-.04em}
+        .sec-hd-sub{font-size:9px;font-family:${T.m};color:${T.tm};letter-spacing:.03em}
+      \`}</style>
 
       {showApiModal&&<ApiKeyModal onSave={saveApiKey} onSkip={()=>setShowApiModal(false)}/>}
 
@@ -1026,39 +1042,54 @@ export default function TrendRadarV5() {
         ))}
       </div>
 
-      {/* ── Tabs ── */}
-      <div style={{display:"flex",borderBottom:`1px solid ${T.b}`,background:T.s,overflowX:"auto",padding:"0 4px"}}>
+      {/* ── Main Layout: Sidebar + Content ── */}
+      <div style={{display:"flex",minHeight:"calc(100vh - 52px)"}}>
+
+      {/* ══ SIDEBAR ══ */}
+      <aside style={{width:192,flexShrink:0,borderRight:`1px solid ${T.b}`,background:T.s,
+        display:"flex",flexDirection:"column",gap:1,
+        position:"sticky",top:52,height:"calc(100vh - 52px)",overflowY:"auto",
+        padding:"14px 10px"}}>
+
+        {/* NAVIGATION */}
+        <div className="sb-title">NAVIGATION<div className="sb-title-bar"/></div>
         {[
-          {id:"trends",   l:"트렌드",    ic:"trend",   n:filtered.length, c:T.ac},
-          {id:"youtube",  l:"유튜브",    ic:"youtube", n:null, c:"#ff0000"},
-          {id:"cross",    l:"교차분석",  ic:"zap",     n:null, hot:!!(analysis&&ytResult), c:T.r},
-          {id:"channel",  l:"채널분석",  ic:"bar",     n:null, c:T.ro},
-          {id:"pipeline", l:"파이프라인",ic:"list",    n:pipe.length, c:T.g},
-        ].map(tb=>(
-          <button key={tb.id} onClick={()=>setTab(tb.id)}
-            style={{flex:"1 0 auto",padding:"10px 8px",background:tab===tb.id?`${tb.c}10`:"transparent",
-              border:"none",borderBottom:tab===tb.id?`2px solid ${tb.c}`:"2px solid transparent",
-              color:tab===tb.id?tb.c:T.tm,fontSize:10,fontWeight:700,cursor:"pointer",
-              transition:"all .2s",position:"relative",whiteSpace:"nowrap",letterSpacing:"0.01em"}}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
-              <Icon name={tb.ic} size={13} color={tab===tb.id?tb.c:T.tm}/>
-              <span>{tb.l}</span>
-              {tb.n!==null&&(
-                <span style={{fontFamily:T.m,fontSize:8,background:tab===tb.id?`${tb.c}20`:T.b,
-                  padding:"1px 5px",borderRadius:20,
-                  color:tab===tb.id?tb.c:T.tm,border:`1px solid ${tab===tb.id?`${tb.c}40`:T.b}`}}>
-                  {tb.n}
-                </span>
-              )}
-            </div>
-            {tb.hot&&(
-              <span style={{position:"absolute",top:7,right:5,width:5,height:5,
-                borderRadius:"50%",background:T.r,animation:"pulse 1s infinite",
-                boxShadow:`0 0 5px ${T.r}`}}/>
-            )}
-          </button>
+          {id:"trends",   l:"트렌드분석", ic:"trend",   n:filtered.length, c:T.ac},
+          {id:"youtube",  l:"유튜브",     ic:"youtube", n:null,            c:"#ff4444"},
+          {id:"cross",    l:"교차분석",   ic:"zap",     n:null,            c:T.r, hot:!!(analysis&&ytResult)},
+          {id:"channel",  l:"채널분석",   ic:"bar",     n:null,            c:T.ro},
+          {id:"pipeline", l:"파이프라인", ic:"list",    n:pipe.length,     c:T.g},
+        ].map(it=>(
+          <div key={it.id} onClick={()=>setTab(it.id)} className={`sitem${tab===it.id?" on":""}`}
+            style={{color:tab===it.id?it.c:T.ts}}>
+            <Icon name={it.ic} size={13} color={tab===it.id?it.c:T.tm}/>
+            {it.l}
+            {it.n!=null&&<span className="snum" style={tab===it.id?{background:`${it.c}20`,color:it.c}:{}}>{it.n}</span>}
+            {it.hot&&<span className="shot"/>}
+          </div>
         ))}
-      </div>
+
+        {/* 소스 필터 */}
+        <div className="sb-title" style={{marginTop:8}}>소스 필터<div className="sb-title-bar"/></div>
+        {Object.entries(SRC).map(([k,v])=>{
+          const st2=fStatus[k]; const n=st2?.n||0;
+          return(
+            <div key={k} onClick={()=>setSrcF(srcF===k?"all":k)}
+              className={`sitem${srcF===k?" on":""}`}
+              style={{color:srcF===k?v.c:T.ts}}>
+              <span style={{fontSize:11,fontFamily:T.m,fontWeight:800,color:v.c,
+                width:14,textAlign:"center",flexShrink:0}}>{v.i}</span>
+              <span style={{flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
+                fontSize:11}}>{v.l}</span>
+              <span className="snum" style={srcF===k?{background:`${v.c}20`,color:v.c}:{}}>{n}</span>
+            </div>
+          );
+        })}
+      </aside>
+
+      {/* ══ CONTENT ══ */}
+      <div style={{flex:1,overflowY:"auto",minWidth:0}}>
+
 
       {/* ══ TRENDS TAB ══ */}
       {tab==="trends"&&<div>
@@ -2066,12 +2097,15 @@ A professional Korean office worker in their 30s, wearing smart casual business 
         </div>
       )}
 
-      <div style={{padding:"20px 16px",borderTop:`1px solid ${T.b}`,textAlign:"center",marginTop:8}}>
+      <div style={{padding:"16px 20px",borderTop:`1px solid ${T.b}`,textAlign:"center",marginTop:8}}>
         <div style={{fontSize:10,color:T.tm,fontFamily:T.m,lineHeight:2}}>
-          TREND RADAR v5.0 · Powered by <span style={{color:"#4285f4"}}>Google OpenRouter (Llama 3.3 70B)</span> (무료)<br/>
+          TREND RADAR v6.0 · AI 콘텐츠 파이프라인<br/>
           HackerNews · Reddit · Google Trends KR/US/Global · 네이버뉴스 · ProductHunt · GitHub Trending
         </div>
       </div>
+
+      </div>{/* /content */}
+      </div>{/* /flex layout */}
     </div>
   </>);
 }
