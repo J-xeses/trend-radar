@@ -201,13 +201,16 @@ export default function TrendRadar() {
 
   // ─── 데이터 수집 ──────────────────────────────────────────
   const fetchAll = useCallback(async () => {
+    // 현재 선택된 지역/기간 스냅샷
+    const currentRegion = region;
     setLoading(true);
     const all = [], st = {};
 
     await Promise.allSettled([
 
       // ── 1. 유튜브 급상승 (RSS, 무료) ──────────────────────
-      fetch("/api/youtube?type=trending")
+      const ytRegion = currentRegion === "all" ? "US" : currentRegion;
+      fetch(`/api/youtube?type=trending&region=${ytRegion}`)
         .then(r => r.json())
         .then(d => {
           try {
@@ -317,19 +320,38 @@ export default function TrendRadar() {
     setFStatus(st);
     setLastFetch(new Date());
     setLoading(false);
-  }, []);
+  }, [region]);
 
   useEffect(() => { fetchAll(); }, []);
 
   // ─── 필터링 ───────────────────────────────────────────────
+  // 기간 필터 계산
+  const periodMs = {
+    "live": 1  * 60 * 60 * 1000,      // 1시간
+    "24h":  24 * 60 * 60 * 1000,      // 24시간
+    "7d":   7  * 24 * 60 * 60 * 1000, // 7일
+    "30d":  30 * 24 * 60 * 60 * 1000, // 30일
+    "all":  null,                       // 전체
+  };
+
   const filtered = items.filter(item => {
+    // 소스 필터
     if (srcDetail && item.source !== srcDetail) return false;
     if (srcGroup !== "all" && !srcDetail) {
       const grp = SRC_GROUPS.find(g=>g.id===srcGroup);
       if (grp && !grp.sources.find(s=>s.id===item.source)) return false;
     }
+    // 기간 필터
+    const ms = periodMs[period];
+    if (ms && item.time) {
+      const diff = Date.now() - new Date(item.time).getTime();
+      if (diff > ms) return false;
+    }
+    // 카테고리 필터
     if (catId !== "all") { if (getCat(item) !== catId) return false; }
+    // 열기 필터
     if (heat !== "all")  { if (getHeat(item) !== heat) return false; }
+    // 키워드 필터
     if (keyword.trim()) {
       if (!item.title.toLowerCase().includes(keyword.toLowerCase())) return false;
     }
