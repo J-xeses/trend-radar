@@ -213,14 +213,22 @@ export default function TrendRadar() {
           try {
             const xml = new DOMParser().parseFromString(d.xml||"","text/xml");
             const entries = Array.from(xml.querySelectorAll("entry"));
-            const parsed = entries.slice(0,25).map((e,i) => ({
-              id:`yt_${Date.now()}_${i}`, source:"youtube_kr",
-              title: e.querySelector("title")?.textContent||"",
-              url:   e.querySelector("link")?.getAttribute("href")||"",
-              score: Math.max(20, 90 - i*2.5),
-              time:  e.querySelector("published")?.textContent||"",
-              extra: { channel: e.querySelector("author name")?.textContent||"" }
-            }));
+            if (!entries.length) throw new Error("YouTube RSS entries empty");
+            const parsed = entries.slice(0,25).map((e,i) => {
+              const linkEl = e.querySelector("link");
+              const href = linkEl?.getAttribute("href") || linkEl?.textContent || "";
+              return {
+                id:`yt_${Date.now()}_${i}`, source:"youtube_kr",
+                title: e.querySelector("title")?.textContent||"",
+                url:   href,
+                score: Math.max(20, 90 - i*2.5),
+                time:  e.querySelector("published")?.textContent||"",
+                extra: {
+                  channel: e.querySelector("author name")?.textContent||"",
+                  views: e.querySelector("statistics")?.getAttribute("views")||"0",
+                }
+              };
+            });
             all.push(...parsed);
             st.youtube_kr = { ok:true, n:parsed.length };
           } catch(e) { st.youtube_kr = { ok:false, n:0, err:e.message }; }
@@ -270,7 +278,7 @@ export default function TrendRadar() {
         }).catch(e => { st.reddit = { ok:false, n:0, err:e.message }; }),
 
       // ── 4. GitHub Trending (공개 Search API, 무료) ────────
-      fetch("https://api.github.com/search/repositories?q=created:>2025-01-01+stars:>100&sort=stars&order=desc&per_page=20", {
+      fetch("https://api.github.com/search/repositories?q=pushed:>2025-06-01+stars:>50&sort=updated&order=desc&per_page=20", {
         headers: { "Accept": "application/vnd.github.v3+json" }
       }).then(r=>r.json())
         .then(d => {
@@ -1362,11 +1370,28 @@ export default function TrendRadar() {
             <span>총 <strong style={{color:C.t}}>{items.length}</strong>개</span>
             {totalFire>0&&<span style={{color:C.r}}>🔥 <strong>{totalFire}</strong></span>}
             {totalRise>0&&<span style={{color:C.am}}>📈 <strong>{totalRise}</strong></span>}
-            <span>
-              <strong style={{color:C.ts}}>
-                {Object.values(fStatus).filter(s=>s.ok).length}
-              </strong>/{Object.keys(fStatus).length} 소스
-            </span>
+            {/* 소스별 상태 뱃지 */}
+            {[
+              {id:"youtube_kr", icon:"▶", color:"#ff4444"},
+              {id:"hackernews", icon:"Y",  color:"#ff6600"},
+              {id:"reddit",     icon:"R",  color:"#ff4500"},
+              {id:"github",     icon:"G",  color:"#a78bfa"},
+              {id:"producthunt",icon:"P",  color:"#da552f"},
+            ].map(src => {
+              const st = fStatus[src.id];
+              return (
+                <span key={src.id} title={st?.err||src.id} style={{
+                  fontSize:9, fontFamily:C.m, fontWeight:800,
+                  padding:"2px 6px", borderRadius:12,
+                  background: st?.ok ? `${src.color}20` : "rgba(255,255,255,.06)",
+                  color: st?.ok ? src.color : C.tb,
+                  border: `1px solid ${st?.ok ? src.color+"40" : "transparent"}`,
+                  cursor:"default",
+                }}>
+                  {src.icon}{st?.ok ? ` ${st.n}` : " —"}
+                </span>
+              );
+            })}
           </div>
 
           {/* 버튼 */}
