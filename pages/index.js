@@ -323,7 +323,7 @@ export default function TrendRadar() {
     setLoading(false);
   }, [region]);
 
-  useEffect(() => { fetchAll(); }, []);
+  useEffect(() => { fetchAll(); }, [region]);
 
   // ---
   // period filter
