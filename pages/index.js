@@ -394,20 +394,37 @@ export default function TrendRadar() {
     if (!ytKeyword.trim()) return;
     setYtLoading(true); setYtResult(null); setActionTab("youtube");
     try {
+      // 1. YouTube Data API로 실제 영상 검색
+      const ytRegionNow = region === "all" ? "US" : region;
+      const searchRes = await fetch(
+        `/api/youtube?type=search&q=${encodeURIComponent(ytKeyword)}&region=${ytRegionNow}`
+      );
+      const searchData = await searchRes.json();
+      const videos = searchData.videos || [];
+
+      // 2. Claude로 패턴 분석
       const res = await fetch("/api/analyze", {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
           type:"youtube_benchmark",
           keyword:ytKeyword,
-          videos: filtered.slice(0,5).map(v=>({title:v.title,channel:v.extra?.channel||"",views:"미집계",uploadDate:v.time})),
+          videos: videos.slice(0,10).map(v=>({
+            title:v.title,
+            channel:v.channel,
+            views:v.views,
+            uploadDate:v.publishedAt,
+          })),
           apiKey
         })
       });
       const d = await res.json();
-      setYtResult(d.result ? {...d.result, keyword:ytKeyword} : {error:d.error});
+      setYtResult(d.result
+        ? {...d.result, keyword:ytKeyword, videos}
+        : {error:d.error, videos}
+      );
     } catch(e) { setYtResult({error:e.message}); }
     setYtLoading(false);
-  }, [apiKey, ytKeyword, filtered]);
+  }, [apiKey, ytKeyword, region]);
 
   const doCross = useCallback(async () => {
     if (!apiKey || !analysis || !ytResult) return;
@@ -1024,17 +1041,20 @@ export default function TrendRadar() {
   // ---
   const YoutubePanel = () => (
     <div style={{padding:"22px",display:"flex",flexDirection:"column",gap:14}}>
-      
+
+      {/* 키워드 입력 */}
       <div style={{
         background:C.bg2,border:`1px solid ${C.b}`,
         borderRadius:14,padding:"18px 20px",
       }}>
-        <div style={{fontSize:11,fontFamily:C.m,color:C.tm,marginBottom:10}}>벤치마킹 키워드</div>
+        <div style={{fontSize:11,fontFamily:C.m,color:C.tm,marginBottom:10}}>
+          유튜브 벤치마킹 — 키워드로 경쟁 영상 분석
+        </div>
         <div style={{display:"flex",gap:8}}>
           <input
             value={ytKeyword} onChange={e=>setYtKeyword(e.target.value)}
             onKeyDown={e=>e.key==="Enter"&&doYoutubeBench()}
-            placeholder="분석할 키워드 입력..."
+            placeholder="분석할 키워드 입력... (예: ChatGPT 엑셀)"
             style={{
               flex:1,background:C.bg3,border:`1px solid ${C.b}`,
               borderRadius:10,padding:"10px 14px",
@@ -1043,10 +1063,10 @@ export default function TrendRadar() {
           />
           <button onClick={doYoutubeBench} disabled={ytLoading||!ytKeyword.trim()}
             style={{
-              padding:"10px 20px",borderRadius:10,
-              background:`linear-gradient(135deg,#ff4444,#ff6666)`,
+              padding:"10px 22px",borderRadius:10,
+              background:"linear-gradient(135deg,#ff4444,#ff6666)",
               color:"#fff",fontSize:13,fontWeight:700,
-              opacity:ytLoading||!ytKeyword.trim()?.5:1,
+              opacity:ytLoading||!ytKeyword.trim()?.5:1,whiteSpace:"nowrap",
             }}>
             {ytLoading?"분석중...":"🔴 검색"}
           </button>
@@ -1057,11 +1077,12 @@ export default function TrendRadar() {
             display:"flex",alignItems:"center",gap:6,
           }}>
             <Ic n="check" s={11} c={C.g}/>
-            AI분석 키워드 자동 설정됨 — 수정 후 검색 가능
+            AI분석 키워드 자동 설정 — 수정 후 검색 가능
           </div>
         )}
       </div>
 
+      {/* 로딩 */}
       {ytLoading && (
         <div style={{
           display:"flex",alignItems:"center",gap:14,
@@ -1074,24 +1095,79 @@ export default function TrendRadar() {
             animation:"spin .7s linear infinite",flexShrink:0,
           }}/>
           <div>
-            <div style={{fontSize:13,fontWeight:700,color:C.t,marginBottom:3}}>유튜브 경쟁 분석 중...</div>
-            <div style={{fontSize:11,color:C.tm}}>키워드 "{ytKeyword}" 분석 중</div>
+            <div style={{fontSize:13,fontWeight:700,color:C.t,marginBottom:3}}>
+              "{ytKeyword}" 경쟁 영상 분석 중...
+            </div>
+            <div style={{fontSize:11,color:C.tm}}>
+              YouTube 검색 + Claude 패턴 분석
+            </div>
           </div>
         </div>
       )}
 
+      {/* 에러 */}
       {ytResult?.error && (
         <div style={{padding:"16px 18px",background:C.rd,border:`1px solid ${C.rb}`,borderRadius:12,color:C.r,fontSize:13}}>
           {ytResult.error}
         </div>
       )}
 
+      {/* 결과 */}
       {ytResult && !ytResult.error && (
-        <div style={{display:"flex",flexDirection:"column",gap:12,animation:"fadeUp .3s ease"}}>
-          
+        <div style={{display:"flex",flexDirection:"column",gap:14,animation:"fadeUp .3s ease"}}>
+
+          {/* 검색된 영상 카드들 */}
+          {ytResult.videos?.length>0 && (
+            <div style={{background:C.bg2,border:`1px solid ${C.b}`,borderRadius:14,padding:"16px 18px"}}>
+              <div style={{fontSize:11,fontFamily:C.m,color:C.tm,marginBottom:12}}>
+                경쟁 영상 {ytResult.videos.length}개
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                {ytResult.videos.map((v,i)=>(
+                  <div key={i}
+                    onClick={()=>window.open(v.url,"_blank")}
+                    style={{
+                      display:"flex",gap:12,alignItems:"center",
+                      background:C.bg3,borderRadius:10,padding:"10px 12px",
+                      cursor:"pointer",transition:"all .15s",
+                    }}
+                    onMouseEnter={e=>e.currentTarget.style.background=C.bg4}
+                    onMouseLeave={e=>e.currentTarget.style.background=C.bg3}
+                  >
+                    {/* 썸네일 */}
+                    {v.thumbnail && (
+                      <img src={v.thumbnail} alt={v.title}
+                        style={{width:80,height:45,objectFit:"cover",borderRadius:6,flexShrink:0}}
+                      />
+                    )}
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{
+                        fontSize:12,fontWeight:600,color:C.t,
+                        marginBottom:4,lineHeight:1.4,
+                        overflow:"hidden",display:"-webkit-box",
+                        WebkitLineClamp:2,WebkitBoxOrient:"vertical",
+                      }}>{v.title}</div>
+                      <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                        <span style={{fontSize:10,color:C.tm}}>{v.channel}</span>
+                        {v.views && <span style={{fontSize:10,fontFamily:C.m,color:C.am}}>👁 {v.views}</span>}
+                        {v.publishedAt && <span style={{fontSize:10,fontFamily:C.m,color:C.tm}}>{v.publishedAt}</span>}
+                      </div>
+                    </div>
+                    <span style={{
+                      fontSize:9,fontFamily:C.m,padding:"2px 7px",borderRadius:20,
+                      background:`${v.isShorts?"rgba(255,68,68,.15)":C.acd}`,
+                      color:v.isShorts?"#ff8080":C.ac2,flexShrink:0,
+                    }}>{v.isShorts?"Shorts":"롱폼"}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Claude 분석 결과 */}
           {ytResult.title_patterns?.length>0 && (
             <div style={{background:C.bg2,border:`1px solid ${C.b}`,borderRadius:12,padding:"16px 18px"}}>
-              <div style={{fontSize:10,fontFamily:C.m,color:C.tm,marginBottom:10}}>제목 패턴</div>
+              <div style={{fontSize:11,fontFamily:C.m,color:C.tm,marginBottom:10}}>제목 패턴</div>
               <div style={{display:"flex",flexDirection:"column",gap:6}}>
                 {ytResult.title_patterns.map((p,i)=>(
                   <div key={i} style={{
@@ -1105,8 +1181,9 @@ export default function TrendRadar() {
               </div>
             </div>
           )}
-          
-          {(ytResult.gap || ytResult.my_angle) && (
+
+          {/* 빈틈 + 각도 */}
+          {(ytResult.gap||ytResult.my_angle) && (
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
               {ytResult.gap && (
                 <div style={{background:C.gd,border:`1px solid ${C.gb}`,borderRadius:12,padding:"14px 16px"}}>
@@ -1122,31 +1199,42 @@ export default function TrendRadar() {
               )}
             </div>
           )}
-          
+
+          {/* 추천 제목 */}
           {ytResult.recommended_title && (
             <div style={{background:C.bg2,border:`1px solid ${C.acb}`,borderRadius:12,padding:"16px 18px"}}>
               <div style={{fontSize:10,fontFamily:C.m,color:C.tm,marginBottom:8}}>추천 영상 제목</div>
-              <div style={{fontSize:16,fontWeight:700,color:C.t,lineHeight:1.5}}>{ytResult.recommended_title}</div>
-              {ytResult.estimated_views && (
-                <div style={{fontSize:11,color:C.g,fontFamily:C.m,marginTop:6}}>예상 조회수: {ytResult.estimated_views}</div>
-              )}
+              <div style={{fontSize:17,fontWeight:800,color:C.t,lineHeight:1.5,marginBottom:8}}>
+                "{ytResult.recommended_title}"
+              </div>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                {ytResult.estimated_views && (
+                  <span style={{fontSize:11,fontFamily:C.m,padding:"3px 9px",borderRadius:20,background:C.gd,color:C.g}}>
+                    예상 {ytResult.estimated_views}
+                  </span>
+                )}
+                {ytResult.best_upload_time && (
+                  <span style={{fontSize:11,fontFamily:C.m,padding:"3px 9px",borderRadius:20,background:C.acd,color:C.ac2}}>
+                    ⏰ {ytResult.best_upload_time}
+                  </span>
+                )}
+              </div>
             </div>
           )}
-          
+
+          {/* 교차분석 버튼 */}
           {analysis && (
-            <button onClick={doCross}
-              style={{
-                padding:"13px",borderRadius:12,
-                background:C.amd,border:`1px solid ${C.amb}`,
-                color:C.am,fontSize:14,fontWeight:700,
-              }}>⚡ 교차분석으로 최종 전략 도출 →</button>
+            <button onClick={doCross} style={{
+              padding:"13px",borderRadius:12,
+              background:C.amd,border:`1px solid ${C.amb}`,
+              color:C.am,fontSize:14,fontWeight:700,
+            }}>⚡ 교차분석으로 최종 전략 도출 →</button>
           )}
         </div>
       )}
     </div>
   );
 
-  // ---
   const CrossPanel = () => (
     <div style={{padding:"22px",display:"flex",flexDirection:"column",gap:14}}>
       {!analysis || !ytResult ? (
