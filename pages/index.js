@@ -1053,7 +1053,7 @@ export default function TrendRadar() {
         <div style={{display:"flex",gap:8}}>
           <input
             value={ytKeyword} onChange={e=>setYtKeyword(e.target.value)}
-            onKeyUp={e=>e.key==="Enter"&&!e.nativeEvent?.isComposing&&doYoutubeBench()}
+            
             placeholder="분석할 키워드 입력... (예: ChatGPT 엑셀)"
             style={{
               flex:1,background:C.bg3,border:`1px solid ${C.b}`,
