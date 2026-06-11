@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Head from "next/head";
 
-// ─── SVG 아이콘 ───────────────────────────────────────────────
+// ---
 const Ic = ({ n, s=16, c="currentColor" }) => {
   const icons = {
     trend:   <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>,
@@ -20,7 +20,7 @@ const Ic = ({ n, s=16, c="currentColor" }) => {
   return icons[n] || null;
 };
 
-// ─── 디자인 토큰 ─────────────────────────────────────────────
+// ---
 const C = {
   bg:  "#07070e", bg1: "#0d0d1a", bg2: "#131320", bg3: "#191928", bg4: "#202033",
   ac:  "#7c6ff7", ac2: "#a78bfa", acd: "rgba(124,111,247,.12)", acb: "rgba(124,111,247,.28)",
@@ -35,7 +35,7 @@ const C = {
   f:   "'Pretendard', 'Noto Sans KR', -apple-system, sans-serif",
 };
 
-// ─── 소스 그룹 ───────────────────────────────────────────────
+// ---
 const SRC_GROUPS = [
   { id:"all",    label:"전체",    icon:"🌐", color:C.ac,  sources:[] },
   { id:"video",  label:"영상",    icon:"📺", color:"#ff4444",
@@ -66,7 +66,7 @@ const SRC_GROUPS = [
   },
 ];
 
-// ─── 지역 ────────────────────────────────────────────────────
+// ---
 const REGIONS = [
   { id:"KR", label:"🇰🇷 한국",   lang:"ko" },
   { id:"US", label:"🇺🇸 미국",   lang:"en" },
@@ -75,7 +75,7 @@ const REGIONS = [
   { id:"all",label:"🌍 전세계", lang:""   },
 ];
 
-// ─── 기간 ────────────────────────────────────────────────────
+// ---
 const PERIODS = [
   { id:"live", label:"실시간" },
   { id:"24h",  label:"24시간" },
@@ -84,7 +84,7 @@ const PERIODS = [
   { id:"all",  label:"전체"  },
 ];
 
-// ─── 카테고리 ────────────────────────────────────────────────
+// ---
 const CATS = [
   { id:"ai",    e:"🤖", n:"AI·자기계발",  color:"#a78bfa",
     keywords:["AI","ChatGPT","GPT","Claude","Gemini","인공지능","자동화","생산성","자기계발","노션"],
@@ -109,7 +109,7 @@ const CATS = [
     subs:["해외여행","국내여행","맛집","뷰티·패션","인테리어","요리"] },
 ];
 
-// ─── 열기 ────────────────────────────────────────────────────
+// ---
 const HEATS = [
   { id:"all",  label:"전체",    color:C.ts  },
   { id:"fire", label:"🔥 폭발", color:C.r   },
@@ -118,7 +118,7 @@ const HEATS = [
   { id:"new",  label:"🆕 신규", color:C.cy  },
 ];
 
-// ─── 액션 탭 ─────────────────────────────────────────────────
+// ---
 const ACTION_TABS = [
   { id:"list",    label:"트렌드 목록",     icon:"trend",   color:C.ac,   desc:"수집된 트렌드를 탐색하세요"    },
   { id:"analyze", label:"AI 분석",         icon:"zap",     color:C.ro,   desc:"Claude가 콘텐츠 기회를 분석"  },
@@ -127,7 +127,7 @@ const ACTION_TABS = [
   { id:"pipeline",label:"파이프라인",      icon:"pipe",    color:C.g,    desc:"콘텐츠 제작 관리"              },
 ];
 
-// ─── 유틸 ────────────────────────────────────────────────────
+// ---
 function calcScore(item) {
   let s = item.score || 50;
   if (item.source === "youtube_kr") s = Math.min(100, s + 15);
@@ -154,16 +154,16 @@ function timeAgo(t) {
   return `${Math.floor(d/86400)}일 전`;
 }
 
-// ─── 메인 컴포넌트 ────────────────────────────────────────────
+// ---
 export default function TrendRadar() {
-  // 데이터
+  //
   const sidebarRef = useRef(null);
   const [items, setItems]       = useState([]);
   const [loading, setLoading]   = useState(false);
   const [fStatus, setFStatus]   = useState({});
   const [lastFetch, setLastFetch] = useState(null);
 
-  // 필터 (위계 순서대로)
+  //
   const [region, setRegion]     = useState("KR");
   const [period, setPeriod]     = useState("24h");
   const [srcGroup, setSrcGroup] = useState("all");
@@ -175,7 +175,7 @@ export default function TrendRadar() {
   const [sortBy, setSortBy]     = useState("score");
   const [keyword, setKeyword]   = useState("");
 
-  // 액션 탭 & 분석 상태
+  //
   const [actionTab, setActionTab] = useState("list");
   const [selItem, setSelItem]     = useState(null);
   const [analysis, setAnalysis]   = useState(null);
@@ -188,7 +188,7 @@ export default function TrendRadar() {
   const [crossLoading, setCrossLoading] = useState(false);
   const [pipe, setPipe]           = useState([]);
 
-  // API 키
+  //
   const [apiKey, setApiKey]       = useState(() =>
     typeof window !== "undefined" ? localStorage.getItem("tr_claude_key")||"" : "");
   const [showApiModal, setShowApiModal] = useState(false);
@@ -199,9 +199,9 @@ export default function TrendRadar() {
     setShowApiModal(false);
   };
 
-  // ─── 데이터 수집 ──────────────────────────────────────────
+  // ---
   const fetchAll = useCallback(async () => {
-    // 현재 선택된 지역/기간 스냅샷
+    // snapshot current region
     const currentRegion = region;
     setLoading(true);
     const all = [], st = {};
@@ -210,7 +210,7 @@ export default function TrendRadar() {
 
     await Promise.allSettled([
 
-      // ── 1. 유튜브 급상승 (RSS, 무료) ──────────────────────
+      // 1. YouTube trending (via API)
       fetch(`/api/youtube?type=trending&region=${ytRegion}`)
         .then(r => r.json())
         .then(d => {
@@ -238,7 +238,7 @@ export default function TrendRadar() {
           } catch(e) { st.youtube_kr = { ok:false, n:0, err:e.message }; }
         }).catch(e => { st.youtube_kr = { ok:false, n:0, err:e.message }; }),
 
-      // ── 2. HackerNews Top Stories (Firebase API, 무료) ────
+      // 2. HackerNews top stories
       fetch("https://hacker-news.firebaseio.com/v0/topstories.json")
         .then(r => r.json())
         .then(async ids => {
@@ -261,7 +261,7 @@ export default function TrendRadar() {
           st.hackernews = { ok:true, n:parsed.length };
         }).catch(e => { st.hackernews = { ok:false, n:0, err:e.message }; }),
 
-      // ── 3. Reddit (서버 사이드 API) ──────────────────────
+      // 3. Reddit (server-side API)
       fetch("/api/reddit")
         .then(r=>r.json())
         .then(d => {
@@ -278,7 +278,7 @@ export default function TrendRadar() {
           st.reddit = { ok:true, n:parsed.length };
         }).catch(e => { st.reddit = { ok:false, n:0, err:e.message }; }),
 
-      // ── 4. GitHub Trending (공개 Search API, 무료) ────────
+      // 4. GitHub trending repos
       fetch("https://api.github.com/search/repositories?q=pushed:>2025-06-01+stars:>50&sort=updated&order=desc&per_page=20", {
         headers: { "Accept": "application/vnd.github.v3+json" }
       }).then(r=>r.json())
@@ -296,7 +296,7 @@ export default function TrendRadar() {
           st.github = { ok:true, n:parsed.length };
         }).catch(e => { st.github = { ok:false, n:0, err:e.message }; }),
 
-      // ── 5. ProductHunt (RSS via server) ──────────────────
+      // 5. ProductHunt RSS
       fetch("/api/producthunt")
         .then(r=>r.json())
         .then(d => {
@@ -325,34 +325,34 @@ export default function TrendRadar() {
 
   useEffect(() => { fetchAll(); }, []);
 
-  // ─── 필터링 ───────────────────────────────────────────────
-  // 기간 필터 계산
+  // ---
+  // period filter
   const periodMs = {
-    "live": 1  * 60 * 60 * 1000,      // 1시간
-    "24h":  24 * 60 * 60 * 1000,      // 24시간
-    "7d":   7  * 24 * 60 * 60 * 1000, // 7일
-    "30d":  30 * 24 * 60 * 60 * 1000, // 30일
-    "all":  null,                       // 전체
+    "live": 1  * 60 * 60 * 1000,      //
+    "24h":  24 * 60 * 60 * 1000,      //
+    "7d":   7  * 24 * 60 * 60 * 1000, //
+    "30d":  30 * 24 * 60 * 60 * 1000, //
+    "all":  null,                       //
   };
 
   const filtered = items.filter(item => {
-    // 소스 필터
+    //
     if (srcDetail && item.source !== srcDetail) return false;
     if (srcGroup !== "all" && !srcDetail) {
       const grp = SRC_GROUPS.find(g=>g.id===srcGroup);
       if (grp && !grp.sources.find(s=>s.id===item.source)) return false;
     }
-    // 기간 필터
+    //
     const ms = periodMs[period];
     if (ms && item.time) {
       const diff = Date.now() - new Date(item.time).getTime();
       if (diff > ms) return false;
     }
-    // 카테고리 필터
+    //
     if (catId !== "all") { if (getCat(item) !== catId) return false; }
-    // 열기 필터
+    //
     if (heat !== "all")  { if (getHeat(item) !== heat) return false; }
-    // 키워드 필터
+    //
     if (keyword.trim()) {
       if (!item.title.toLowerCase().includes(keyword.toLowerCase())) return false;
     }
@@ -372,7 +372,7 @@ export default function TrendRadar() {
   const totalFire = items.filter(i=>getHeat(i)==="fire").length;
   const totalRise = items.filter(i=>getHeat(i)==="rise").length;
 
-  // ─── AI 분석 ──────────────────────────────────────────────
+  // ---
   const doAnalyze = useCallback(async (item) => {
     if (!apiKey) { setShowApiModal(true); return; }
     setSelItem(item); setAnalysis(null); setAnalysisLoading(true);
@@ -452,18 +452,18 @@ export default function TrendRadar() {
     input,button{font-family:${C.f};border:none;outline:none}
     button{cursor:pointer;transition:all .15s}
 
-    /* ── 사이드바 아이템 ── */
+    /* sidebar item */
     .sbi{display:flex;align-items:center;gap:11px;padding:10px 14px;border-radius:10px;font-size:14px;font-weight:600;color:${C.ts};cursor:pointer;transition:all .15s;position:relative;user-select:none;border:1px solid ${C.b};background:${C.bg2};width:100%;text-align:left;margin-bottom:3px}
     .sbi:hover{background:${C.bg3};border-color:${C.b2};color:${C.t}}
     .sbi.on{font-weight:700;border-color:transparent}
     .sbi.on::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:22px;border-radius:0 3px 3px 0}
 
-    /* ── 소스 세부 ── */
+    /* source sub item */
     .src-sub{display:flex;align-items:center;gap:9px;padding:9px 12px 9px 32px;border-radius:9px;font-size:13px;font-weight:500;color:${C.tm};cursor:pointer;transition:all .2s;border:1px solid transparent;margin-bottom:3px}
     .src-sub:hover{background:rgba(167,139,250,.12);border-color:rgba(167,139,250,.3);color:#ffffff;font-weight:700}
     .src-sub.on{font-weight:700;background:${C.bg3};border-color:${C.b};color:${C.ts}}
 
-    /* ── 카테고리 ── */
+    /* category */
     .cat-main{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;font-size:14px;font-weight:600;color:${C.ts};cursor:pointer;transition:all .15s;user-select:none;border:1px solid ${C.b};background:${C.bg2};margin-bottom:3px}
     .cat-main:hover{background:${C.bg3};border-color:${C.b2};color:${C.t}}
     .cat-main.on{font-weight:700;border-color:transparent}
@@ -471,30 +471,30 @@ export default function TrendRadar() {
     .cat-sub:hover{background:rgba(167,139,250,.12);border-color:rgba(167,139,250,.3);color:#ffffff;font-weight:700}
     .cat-sub.on{font-weight:700;color:${C.t}}
 
-    /* ── 필 버튼 ── */
+    /* pill button */
     .pill{padding:7px 14px;border-radius:10px;font-size:13px;font-weight:600;border:1px solid ${C.b};background:${C.bg2};color:${C.tm};cursor:pointer;transition:all .15s;white-space:nowrap}
     .pill:hover{background:${C.bg3};border-color:${C.b2};color:${C.ts}}
     .pill.on{border-color:transparent}
 
-    /* ── 섹션 라벨 ── */
+    /* section label */
     .sec-lbl{font-size:10px;font-weight:800;letter-spacing:.12em;color:${C.tm};padding:0 4px;margin:16px 0 8px;display:flex;align-items:center;gap:8px}
     .sec-lbl:first-child{margin-top:4px}
     .sec-lbl-bar{flex:1;height:1px;background:${C.b}}
 
-    /* ── 트렌드 카드 ── */
+    /* trend card */
     .tc{background:${C.bg2};border:1px solid ${C.b};border-left:3px solid transparent;border-radius:14px;padding:16px 18px;cursor:pointer;transition:all .18s;animation:fadeUp .25s ease both}
     .tc:hover{background:${C.bg3};border-color:${C.b2};transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,.45)}
 
-    /* ── 액션 카드 ── */
+    /* action card */
     .act-card{border-radius:16px;padding:20px 22px;cursor:pointer;transition:all .18s;border:2px solid transparent;flex:1;min-width:0}
     .act-card:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,0,0,.4)}
     .act-card.on{transform:translateY(-2px)}
 
-    /* ── 스켈레톤 ── */
+    /* skeleton */
     .skel{border-radius:10px;background:linear-gradient(90deg,${C.bg2} 25%,${C.bg3} 50%,${C.bg2} 75%);background-size:200% 100%;animation:shimmer 1.5s infinite}
   `;
 
-  // ─── 사이드바 컴포넌트 ───────────────────────────────────
+  // ---
   const Sidebar = () => (
     <aside ref={sidebarRef} style={{
       width:320, flexShrink:0,
@@ -506,10 +506,10 @@ export default function TrendRadar() {
       display:"flex", flexDirection:"column",
       padding:0,
     }}>
-    {/* 전체 사이드바 콘텐츠 */}
+    {/* sidebar content */}
     <div style={{padding:"14px 12px 0"}}>
 
-      {/* 검색 */}
+      
       <div style={{
         display:"flex", alignItems:"center", gap:9,
         background:C.bg3, border:`1px solid ${C.b}`,
@@ -528,7 +528,7 @@ export default function TrendRadar() {
         )}
       </div>
 
-      {/* 1. 지역 */}
+      
       <div className="sec-lbl">📍 지역<div className="sec-lbl-bar"/></div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:5,padding:"0 2px",marginBottom:4}}>
         {REGIONS.map(r=>(
@@ -540,7 +540,7 @@ export default function TrendRadar() {
         ))}
       </div>
 
-      {/* 2. 기간 */}
+      
       <div className="sec-lbl">📅 기간<div className="sec-lbl-bar"/></div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:5,padding:"0 2px",marginBottom:4}}>
         {PERIODS.map(p=>(
@@ -552,7 +552,7 @@ export default function TrendRadar() {
         ))}
       </div>
 
-      {/* 3. 콘텐츠 유형(소스) */}
+      
       <div className="sec-lbl">📺 콘텐츠 유형<div className="sec-lbl-bar"/></div>
       {SRC_GROUPS.map(grp=>{
         const n = grp.id==="all"
@@ -625,9 +625,9 @@ export default function TrendRadar() {
 
     </div>
     <div style={{padding:"0 12px 12px"}}>
-      {/* 4. 카테고리 */}
+      
       <div className="sec-lbl">📁 카테고리<div className="sec-lbl-bar"/></div>
-      {/* 전체 */}
+      
       <div className={`cat-main${catId==="all"?" on":""}`}
         onClick={()=>{setCatId("all");setOpenCats({});}}
         style={{color:catId==="all"?C.ac2:C.ts, background:catId==="all"?C.acd:C.bg2, borderColor:catId==="all"?C.acb:C.b}}>
@@ -668,7 +668,7 @@ export default function TrendRadar() {
         );
       })}
 
-      {/* 5. 열기 */}
+      
       <div className="sec-lbl">🔥 열기<div className="sec-lbl-bar"/></div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:5,padding:"0 2px"}}>
         {HEATS.map(h=>(
@@ -680,7 +680,7 @@ export default function TrendRadar() {
         ))}
       </div>
 
-      {/* 6. 정렬 */}
+      
       <div className="sec-lbl">📊 정렬<div className="sec-lbl-bar"/></div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:5,padding:"0 2px"}}>
         {[{id:"score",l:"트렌드점수"},{id:"recent",l:"최신순"},{id:"heat",l:"열기순"}].map(s=>(
@@ -697,7 +697,7 @@ export default function TrendRadar() {
   );
 
 
-  // ─── 액션 카드 바 ────────────────────────────────────────
+  // ---
   const ActionBar = () => (
     <div style={{
       display:"flex",gap:10,padding:"18px 22px 14px",
@@ -756,7 +756,7 @@ export default function TrendRadar() {
     </div>
   );
 
-  // ─── 트렌드 목록 ─────────────────────────────────────────
+  // ---
   const ListPanel = () => {
     const heatStyle = {
       fire:{color:C.r,  bg:C.rd,  border:C.rb,  label:"🔥 폭발"},
@@ -766,7 +766,7 @@ export default function TrendRadar() {
     };
     return (
       <div style={{padding:"16px 22px",display:"flex",flexDirection:"column",gap:9}}>
-        {/* 검색 요약 바 */}
+        
         <div style={{
           display:"flex",alignItems:"center",gap:8,
           padding:"10px 14px",
@@ -792,12 +792,12 @@ export default function TrendRadar() {
           </span>
         </div>
 
-        {/* 로딩 스켈레톤 */}
+        
         {loading && filtered.length===0 && [1,2,3,4,5].map(i=>(
           <div key={i} className="skel" style={{height:150}}/>
         ))}
 
-        {/* 빈 상태 */}
+        
         {!loading && filtered.length===0 && (
           <div style={{textAlign:"center",padding:"70px 20px"}}>
             <div style={{fontSize:48,marginBottom:14,opacity:.35}}>📡</div>
@@ -810,7 +810,7 @@ export default function TrendRadar() {
           </div>
         )}
 
-        {/* 트렌드 카드 */}
+        
         {filtered.map((item,idx)=>{
           const score = calcScore(item);
           const h = getHeat(item);
@@ -823,7 +823,7 @@ export default function TrendRadar() {
               onClick={()=>window.open(item.url,"_blank")}
               style={{borderLeftColor:hs.color,animationDelay:`${idx*.035}s`}}
             >
-              {/* 상단 메타 */}
+              
               <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:10,flexWrap:"wrap"}}>
                 <span style={{
                   fontSize:10,fontFamily:C.m,fontWeight:800,
@@ -841,13 +841,13 @@ export default function TrendRadar() {
                 </span>
               </div>
 
-              {/* 제목 */}
+              
               <div style={{
                 fontSize:15,fontWeight:700,lineHeight:1.55,
                 color:C.t,marginBottom:12,letterSpacing:"-.02em",
               }}>{item.title}</div>
 
-              {/* 점수 바 */}
+              
               <div style={{marginBottom:12}}>
                 <div style={{
                   height:3,borderRadius:3,
@@ -865,7 +865,7 @@ export default function TrendRadar() {
                 </div>
               </div>
 
-              {/* 액션 버튼 */}
+              
               <div style={{display:"flex",gap:6}}>
                 {[
                   {l:"🤖 AI분석",    fn:e=>{e.stopPropagation();doAnalyze(item);},
@@ -891,7 +891,7 @@ export default function TrendRadar() {
     );
   };
 
-  // ─── AI 분석 패널 ────────────────────────────────────────
+  // ---
   const AnalyzePanel = () => (
     <div style={{padding:"22px"}}>
       {!selItem && !analysisLoading && (
@@ -941,7 +941,7 @@ export default function TrendRadar() {
             }}>{analysis.error}</div>
           ) : analysis ? (
             <div style={{display:"flex",flexDirection:"column",gap:12}}>
-              {/* 점수 3개 */}
+              
               <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
                 {[
                   {l:"기회점수",   v:`${analysis.opportunity}/10`, c:C.ac},
@@ -957,7 +957,7 @@ export default function TrendRadar() {
                   </div>
                 ))}
               </div>
-              {/* 요약 */}
+              
               {analysis.summary_ko && (
                 <div style={{
                   background:C.bg2,border:`1px solid ${C.b}`,
@@ -967,7 +967,7 @@ export default function TrendRadar() {
                   <div style={{fontSize:13,color:C.ts,lineHeight:1.75}}>{analysis.summary_ko}</div>
                 </div>
               )}
-              {/* 채널 각도 */}
+              
               {analysis.angle && (
                 <div style={{
                   background:C.acd,border:`1px solid ${C.acb}`,
@@ -977,7 +977,7 @@ export default function TrendRadar() {
                   <div style={{fontSize:14,fontWeight:700,color:C.ac2}}>{analysis.angle}</div>
                 </div>
               )}
-              {/* 추천 영상 */}
+              
               {analysis.videos?.length>0 && (
                 <div style={{background:C.bg2,border:`1px solid ${C.b}`,borderRadius:12,padding:"14px 18px"}}>
                   <div style={{fontSize:10,fontFamily:C.m,color:C.tm,marginBottom:10}}>추천 영상 아이디어</div>
@@ -999,7 +999,7 @@ export default function TrendRadar() {
                   </div>
                 </div>
               )}
-              {/* 다음 단계 버튼 */}
+              
               <div style={{display:"flex",gap:8}}>
                 <button onClick={()=>{setActionTab("youtube");}}
                   style={{
@@ -1021,10 +1021,10 @@ export default function TrendRadar() {
     </div>
   );
 
-  // ─── 유튜브 벤치마킹 패널 ────────────────────────────────
+  // ---
   const YoutubePanel = () => (
     <div style={{padding:"22px",display:"flex",flexDirection:"column",gap:14}}>
-      {/* 키워드 입력 */}
+      
       <div style={{
         background:C.bg2,border:`1px solid ${C.b}`,
         borderRadius:14,padding:"18px 20px",
@@ -1088,7 +1088,7 @@ export default function TrendRadar() {
 
       {ytResult && !ytResult.error && (
         <div style={{display:"flex",flexDirection:"column",gap:12,animation:"fadeUp .3s ease"}}>
-          {/* 제목 패턴 */}
+          
           {ytResult.title_patterns?.length>0 && (
             <div style={{background:C.bg2,border:`1px solid ${C.b}`,borderRadius:12,padding:"16px 18px"}}>
               <div style={{fontSize:10,fontFamily:C.m,color:C.tm,marginBottom:10}}>제목 패턴</div>
@@ -1105,7 +1105,7 @@ export default function TrendRadar() {
               </div>
             </div>
           )}
-          {/* 블루오션 + 각도 */}
+          
           {(ytResult.gap || ytResult.my_angle) && (
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
               {ytResult.gap && (
@@ -1122,7 +1122,7 @@ export default function TrendRadar() {
               )}
             </div>
           )}
-          {/* 추천 제목 */}
+          
           {ytResult.recommended_title && (
             <div style={{background:C.bg2,border:`1px solid ${C.acb}`,borderRadius:12,padding:"16px 18px"}}>
               <div style={{fontSize:10,fontFamily:C.m,color:C.tm,marginBottom:8}}>추천 영상 제목</div>
@@ -1132,7 +1132,7 @@ export default function TrendRadar() {
               )}
             </div>
           )}
-          {/* 교차분석 버튼 */}
+          
           {analysis && (
             <button onClick={doCross}
               style={{
@@ -1146,7 +1146,7 @@ export default function TrendRadar() {
     </div>
   );
 
-  // ─── 교차분석 패널 ───────────────────────────────────────
+  // ---
   const CrossPanel = () => (
     <div style={{padding:"22px",display:"flex",flexDirection:"column",gap:14}}>
       {!analysis || !ytResult ? (
@@ -1198,7 +1198,7 @@ export default function TrendRadar() {
         <div style={{padding:"16px 18px",background:C.rd,border:`1px solid ${C.rb}`,borderRadius:12,color:C.r}}>{crossResult.error}</div>
       ) : (
         <div style={{display:"flex",flexDirection:"column",gap:12,animation:"fadeUp .3s ease"}}>
-          {/* 종합 점수 */}
+          
           <div style={{
             background:`linear-gradient(135deg,${C.amd},${C.acd})`,
             border:`1px solid ${C.amb}`,borderRadius:16,padding:"20px 22px",
@@ -1214,7 +1214,7 @@ export default function TrendRadar() {
               </div>
             </div>
           </div>
-          {/* 최종 제목 */}
+          
           {crossResult.final_title && (
             <div style={{background:C.bg2,border:`1px solid ${C.acb}`,borderRadius:12,padding:"16px 18px"}}>
               <div style={{fontSize:10,fontFamily:C.m,color:C.tm,marginBottom:8}}>🏆 최종 추천 제목</div>
@@ -1233,14 +1233,14 @@ export default function TrendRadar() {
               </div>
             </div>
           )}
-          {/* 블루오션 */}
+          
           {crossResult.blue_ocean && (
             <div style={{background:C.gd,border:`1px solid ${C.gb}`,borderRadius:12,padding:"14px 18px"}}>
               <div style={{fontSize:10,fontFamily:C.m,color:C.tm,marginBottom:6}}>🌊 블루오션 전략</div>
               <div style={{fontSize:13,color:C.g,lineHeight:1.6}}>{crossResult.blue_ocean}</div>
             </div>
           )}
-          {/* 파이프라인 추가 */}
+          
           {selItem && (
             <button onClick={()=>addToPipe(selItem)}
               style={{
@@ -1254,7 +1254,7 @@ export default function TrendRadar() {
     </div>
   );
 
-  // ─── 파이프라인 패널 ─────────────────────────────────────
+  // ---
   const PipelinePanel = () => (
     <div style={{padding:"22px"}}>
       <div style={{
@@ -1327,7 +1327,7 @@ export default function TrendRadar() {
   );
 
 
-  // ─── 메인 렌더 ───────────────────────────────────────────
+  // ---
   return (
     <>
       <Head>
@@ -1338,14 +1338,14 @@ export default function TrendRadar() {
 
       <div style={{minHeight:"100vh",background:C.bg,display:"grid",gridTemplateRows:"56px 1fr"}}>
 
-        {/* ── 헤더 ── */}
+        
         <header style={{
           display:"flex",alignItems:"center",padding:"0 22px",gap:16,
           borderBottom:`1px solid ${C.b}`,
           background:"rgba(7,7,14,.96)",backdropFilter:"blur(20px)",
           position:"sticky",top:0,zIndex:100,
         }}>
-          {/* 로고 */}
+          
           <div style={{display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
             <div style={{
               width:36,height:36,borderRadius:10,
@@ -1375,7 +1375,7 @@ export default function TrendRadar() {
             </span>
           </div>
 
-          {/* 통계 */}
+          
           <div style={{
             flex:1,display:"flex",alignItems:"center",gap:18,
             fontSize:12,fontFamily:C.m,color:C.tm,
@@ -1384,7 +1384,7 @@ export default function TrendRadar() {
             <span>총 <strong style={{color:C.t}}>{items.length}</strong>개</span>
             {totalFire>0&&<span style={{color:C.r}}>🔥 <strong>{totalFire}</strong></span>}
             {totalRise>0&&<span style={{color:C.am}}>📈 <strong>{totalRise}</strong></span>}
-            {/* 소스별 상태 뱃지 */}
+            {/* source status badges */}
             {[
               {id:"youtube_kr", icon:"▶", color:"#ff4444"},
               {id:"hackernews", icon:"Y",  color:"#ff6600"},
@@ -1408,7 +1408,7 @@ export default function TrendRadar() {
             })}
           </div>
 
-          {/* 버튼 */}
+          
           <div style={{display:"flex",gap:8,flexShrink:0}}>
             <button onClick={()=>setShowApiModal(true)}
               style={{
@@ -1436,7 +1436,7 @@ export default function TrendRadar() {
           </div>
         </header>
 
-        {/* ── 바디 ── */}
+        
         <div style={{display:"flex",overflow:"hidden"}}>
           <Sidebar/>
           <main style={{
@@ -1444,9 +1444,9 @@ export default function TrendRadar() {
             height:"calc(100vh - 56px)",
             display:"flex",flexDirection:"column",
           }}>
-            {/* 액션 카드 바 */}
+            
             <ActionBar/>
-            {/* 패널 */}
+            
             <div style={{flex:1,overflowY:"auto"}}>
               {actionTab==="list"     && <ListPanel/>}
               {actionTab==="analyze"  && <AnalyzePanel/>}
@@ -1458,7 +1458,7 @@ export default function TrendRadar() {
         </div>
       </div>
 
-      {/* API 키 모달 */}
+      
       {showApiModal && (
         <div style={{
           position:"fixed",inset:0,background:"rgba(0,0,0,.75)",
