@@ -206,10 +206,11 @@ export default function TrendRadar() {
     setLoading(true);
     const all = [], st = {};
 
+    const ytRegion = currentRegion === "all" ? "US" : currentRegion;
+
     await Promise.allSettled([
 
       // ── 1. 유튜브 급상승 (RSS, 무료) ──────────────────────
-      const ytRegion = currentRegion === "all" ? "US" : currentRegion;
       fetch(`/api/youtube?type=trending&region=${ytRegion}`)
         .then(r => r.json())
         .then(d => {
