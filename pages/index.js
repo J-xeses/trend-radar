@@ -534,21 +534,27 @@ export default function TrendRadar() {
         background:C.bg3, border:`1px solid ${C.b}`,
         borderRadius:12, padding:"9px 12px", marginBottom:8,
       }}>
-        <Ic n="search" s={14} c={C.tm}/>
+        <button
+          onClick={()=>{ if(searchInputRef.current) setKeyword(searchInputRef.current.value.trim()); }}
+          style={{background:"none",padding:2,flexShrink:0,cursor:"pointer"}}
+        >
+          <Ic n="search" s={14} c={C.tm}/>
+        </button>
         <input
           ref={searchInputRef}
           defaultValue=""
-          onCompositionEnd={e=>{ /* IME 완성 후 처리 */ }}
-          onKeyUp={e=>{
-            if(e.key==="Enter"&&!e.nativeEvent?.isComposing) {
-              setKeyword(e.target.value.trim());
+          onKeyDown={e=>{
+            if(e.key==="Enter"&&!e.nativeEvent.isComposing) {
+              e.preventDefault();
+              setKeyword(e.currentTarget.value.trim());
             }
           }}
           placeholder="키워드 검색... (Enter)"
-          style={{background:"none",flex:1,fontSize:13,color:C.t}}
+          style={{background:"none",flex:1,fontSize:13,color:C.t,border:"none",outline:"none"}}
         />
         {keyword && (
-          <button onClick={()=>{setKeyword("");if(searchInputRef.current)searchInputRef.current.value="";}} style={{background:"none",color:C.tm,padding:2}}>
+          <button onClick={()=>{ setKeyword(""); if(searchInputRef.current) searchInputRef.current.value=""; }}
+            style={{background:"none",color:C.tm,padding:2,flexShrink:0}}>
             <Ic n="x" s={12} c={C.tm}/>
           </button>
         )}
