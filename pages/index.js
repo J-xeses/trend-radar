@@ -174,7 +174,7 @@ export default function TrendRadar() {
   const [heat, setHeat]         = useState("all");
   const [sortBy, setSortBy]     = useState("score");
   const [keyword, setKeyword]   = useState("");
-  const [searchInput, setSearchInput] = useState("");
+  const searchInputRef = useRef(null);
 
   //
   const [actionTab, setActionTab] = useState("list");
@@ -535,14 +535,15 @@ export default function TrendRadar() {
       }}>
         <Ic n="search" s={14} c={C.tm}/>
         <input
-          value={searchInput}
-          onChange={e=>{ setSearchInput(e.target.value); if(e.target.value==="") setKeyword(""); }}
-          onKeyUp={e=>{ if(e.key==="Enter"&&!e.nativeEvent?.isComposing) setKeyword(searchInput); }}
+          ref={searchInputRef}
+          defaultValue={keyword}
+          onChange={e=>{ if(e.target.value==="") setKeyword(""); }}
+          onKeyUp={e=>{ if(e.key==="Enter"&&!e.nativeEvent?.isComposing) setKeyword(searchInputRef.current?.value||""); }}
           placeholder="키워드 검색... (Enter)"
           style={{background:"none",flex:1,fontSize:13,color:C.t}}
         />
-        {searchInput && (
-          <button onClick={()=>{setKeyword("");setSearchInput("");}} style={{background:"none",color:C.tm,padding:2}}>
+        {keyword && (
+          <button onClick={()=>{setKeyword("");if(searchInputRef.current)searchInputRef.current.value="";}} style={{background:"none",color:C.tm,padding:2}}>
             <Ic n="x" s={12} c={C.tm}/>
           </button>
         )}
