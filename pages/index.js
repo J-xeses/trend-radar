@@ -534,15 +534,14 @@ export default function TrendRadar() {
       }}>
         <Ic n="search" s={14} c={C.tm}/>
         <input
-          defaultValue={keyword}
-          onChange={e=>{ if(e.target.value==="") setKeyword(""); }}
-          onKeyUp={e=>{ if(e.key==="Enter" && !e.nativeEvent?.isComposing) setKeyword(e.target.value); }}
-          placeholder="키워드 검색..."
+          value={searchInput}
+          onChange={e=>{ setSearchInput(e.target.value); if(e.target.value==="") setKeyword(""); }}
+          onKeyUp={e=>{ if(e.key==="Enter"&&!e.nativeEvent?.isComposing) setKeyword(searchInput); }}
+          placeholder="키워드 검색... (Enter)"
           style={{background:"none",flex:1,fontSize:13,color:C.t}}
-          id="sidebar-search"
         />
-        {keyword && (
-          <button onClick={()=>{setKeyword("");const el=document.getElementById("sidebar-search");if(el)el.value="";}} style={{background:"none",color:C.tm,padding:2}}>
+        {searchInput && (
+          <button onClick={()=>{setKeyword("");setSearchInput("");}} style={{background:"none",color:C.tm,padding:2}}>
             <Ic n="x" s={12} c={C.tm}/>
           </button>
         )}
