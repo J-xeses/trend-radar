@@ -174,6 +174,7 @@ export default function TrendRadar() {
   const [heat, setHeat]         = useState("all");
   const [sortBy, setSortBy]     = useState("score");
   const [keyword, setKeyword]   = useState("");
+  const [searchInput, setSearchInput] = useState("");
 
   //
   const [actionTab, setActionTab] = useState("list");
@@ -663,8 +664,12 @@ export default function TrendRadar() {
             <div className={`cat-main${isOn?" on":""}`}
               onClick={()=>{
                 const isCurrentlyOpen = openCats[cat.id];
+                // 스크롤 고정: scrollable div 기준
+                const scrollable = sidebarRef.current?.querySelector('[style*="overflow-y: auto"], [style*="overflowY"]');
+                const savedScroll = scrollable ? scrollable.scrollTop : 0;
                 setOpenCats({[cat.id]: !isCurrentlyOpen});
                 setCatId(cat.id);
+                setTimeout(()=>{ if(scrollable) scrollable.scrollTop = savedScroll; }, 0);
               }}
               style={{color:isOn?cat.color:C.ts, background:isOn?`${cat.color}12`:undefined}}
             >
@@ -711,7 +716,7 @@ export default function TrendRadar() {
         ))}
       </div>
 
-    </div>
+    </div>{/* /scrollable area */}
     </aside>
   );
 
