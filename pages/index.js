@@ -520,12 +520,12 @@ export default function TrendRadar() {
       background:C.bg1,
       position:"sticky", top:56,
       height:"calc(100vh - 56px)",
-      overflowY:"auto",
+      overflowY:"hidden",
       display:"flex", flexDirection:"column",
       padding:0,
     }}>
-    {/* sidebar content */}
-    <div style={{padding:"14px 12px 0"}}>
+    {/* fixed top - region, period, source */}
+    <div style={{flexShrink:0, padding:"14px 12px 0"}}>
 
       
       <div style={{
@@ -643,8 +643,10 @@ export default function TrendRadar() {
         );
       })}
 
-    </div>
-    <div style={{padding:"0 12px 12px"}}>
+    </div>{/* /fixed top */}
+
+    {/* scrollable - category, heat, sort */}
+    <div style={{flex:1, overflowY:"auto", padding:"0 12px 24px"}}>
       
       <div className="sec-lbl">📁 카테고리<div className="sec-lbl-bar"/></div>
       
