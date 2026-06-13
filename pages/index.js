@@ -175,6 +175,7 @@ export default function TrendRadar() {
   const [sortBy, setSortBy]     = useState("score");
   const [keyword, setKeyword]   = useState("");
   const searchInputRef = useRef(null);
+  const searchTimerRef = useRef(null);
 
   //
   const [actionTab, setActionTab] = useState("list");
@@ -536,9 +537,13 @@ export default function TrendRadar() {
         <Ic n="search" s={14} c={C.tm}/>
         <input
           ref={searchInputRef}
-          defaultValue={keyword}
-          onChange={e=>{ if(e.target.value==="") setKeyword(""); }}
-          onKeyUp={e=>{ if(e.key==="Enter"&&!e.nativeEvent?.isComposing) setKeyword(searchInputRef.current?.value||""); }}
+          defaultValue=""
+          onCompositionEnd={e=>{ /* IME 완성 후 처리 */ }}
+          onKeyUp={e=>{
+            if(e.key==="Enter"&&!e.nativeEvent?.isComposing) {
+              setKeyword(e.target.value.trim());
+            }
+          }}
           placeholder="키워드 검색... (Enter)"
           style={{background:"none",flex:1,fontSize:13,color:C.t}}
         />
