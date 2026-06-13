@@ -174,8 +174,7 @@ export default function TrendRadar() {
   const [heat, setHeat]         = useState("all");
   const [sortBy, setSortBy]     = useState("score");
   const [keyword, setKeyword]   = useState("");
-  const searchInputRef = useRef(null);
-  const searchTimerRef = useRef(null);
+
 
   //
   const [actionTab, setActionTab] = useState("list");
@@ -514,6 +513,41 @@ export default function TrendRadar() {
   `;
 
   // ---
+  // SearchBox: 독립 컴포넌트 — Sidebar 리렌더와 무관
+  const SearchBox = ({keyword, setKeyword}) => {
+    const [val, setVal] = React.useState(keyword);
+    const apply = () => setKeyword(val.trim());
+    return (
+      <div style={{
+        display:"flex", alignItems:"center", gap:9,
+        background:C.bg3, border:`1px solid ${C.b}`,
+        borderRadius:12, padding:"9px 12px", marginBottom:8,
+      }}>
+        <button onClick={apply} style={{background:"none",padding:2,flexShrink:0,cursor:"pointer"}}>
+          <Ic n="search" s={14} c={val?C.ac2:C.tm}/>
+        </button>
+        <input
+          value={val}
+          onChange={e=>setVal(e.target.value)}
+          onKeyDown={e=>{
+            if(e.key==="Enter"&&!e.nativeEvent.isComposing){
+              e.preventDefault();
+              apply();
+            }
+          }}
+          placeholder="키워드 검색... (Enter)"
+          style={{background:"none",flex:1,fontSize:13,color:C.t,border:"none",outline:"none"}}
+        />
+        {val && (
+          <button onClick={()=>{setVal("");setKeyword("");}}
+            style={{background:"none",color:C.tm,padding:2,flexShrink:0}}>
+            <Ic n="x" s={12} c={C.tm}/>
+          </button>
+        )}
+      </div>
+    );
+  };
+
   const Sidebar = () => (
     <aside ref={sidebarRef} style={{
       width:320, flexShrink:0,
@@ -529,36 +563,7 @@ export default function TrendRadar() {
     <div style={{flexShrink:0, padding:"14px 12px 0"}}>
 
       
-      <div style={{
-        display:"flex", alignItems:"center", gap:9,
-        background:C.bg3, border:`1px solid ${C.b}`,
-        borderRadius:12, padding:"9px 12px", marginBottom:8,
-      }}>
-        <button
-          onClick={()=>{ if(searchInputRef.current) setKeyword(searchInputRef.current.value.trim()); }}
-          style={{background:"none",padding:2,flexShrink:0,cursor:"pointer"}}
-        >
-          <Ic n="search" s={14} c={C.tm}/>
-        </button>
-        <input
-          ref={searchInputRef}
-          defaultValue=""
-          onKeyDown={e=>{
-            if(e.key==="Enter"&&!e.nativeEvent.isComposing) {
-              e.preventDefault();
-              setKeyword(e.currentTarget.value.trim());
-            }
-          }}
-          placeholder="키워드 검색... (Enter)"
-          style={{background:"none",flex:1,fontSize:13,color:C.t,border:"none",outline:"none"}}
-        />
-        {keyword && (
-          <button onClick={()=>{ setKeyword(""); if(searchInputRef.current) searchInputRef.current.value=""; }}
-            style={{background:"none",color:C.tm,padding:2,flexShrink:0}}>
-            <Ic n="x" s={12} c={C.tm}/>
-          </button>
-        )}
-      </div>
+      <SearchBox keyword={keyword} setKeyword={setKeyword}/>
 
       
       <div className="sec-lbl">📍 지역<div className="sec-lbl-bar"/></div>
