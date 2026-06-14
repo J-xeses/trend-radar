@@ -932,8 +932,28 @@ export default function TrendRadar() {
               
               <div style={{
                 fontSize:15,fontWeight:700,lineHeight:1.55,
-                color:C.t,marginBottom:12,letterSpacing:"-.02em",
+                color:C.t,marginBottom:translations[item.id]?4:12,letterSpacing:"-.02em",
               }}>{item.title}</div>
+
+              {translations[item.id] && (
+                <div style={{
+                  fontSize:12.5,fontWeight:500,lineHeight:1.5,
+                  color:C.ac2,marginBottom:12,
+                  display:"flex",alignItems:"flex-start",gap:5,
+                }}>
+                  <span style={{flexShrink:0,opacity:.7}}>💬</span>
+                  <span>{translations[item.id]}</span>
+                </div>
+              )}
+              {!translations[item.id] && translating && isEnglishTitle(item.title) && (
+                <div style={{
+                  fontSize:11,color:C.tm,marginBottom:12,
+                  display:"flex",alignItems:"center",gap:5,
+                }}>
+                  <span className="skel" style={{display:"inline-block",width:80,height:11,borderRadius:4}}/>
+                  <span>한글 요약 생성 중...</span>
+                </div>
+              )}
 
               
               <div style={{marginBottom:12}}>
