@@ -155,6 +155,41 @@ function timeAgo(t) {
 }
 
 // ---
+// SearchBox: 컴포넌트 외부 정의 - 부모 리렌더와 완전 분리
+function SearchBox({keyword, setKeyword}) {
+    const [val, setVal] = useState(keyword);
+    const apply = () => setKeyword(val.trim());
+    return (
+      <div style={{
+        display:"flex", alignItems:"center", gap:9,
+        background:C.bg3, border:`1px solid ${C.b}`,
+        borderRadius:12, padding:"9px 12px", marginBottom:8,
+      }}>
+        <button onClick={apply} style={{background:"none",padding:2,flexShrink:0,cursor:"pointer"}}>
+          <Ic n="search" s={14} c={val?C.ac2:C.tm}/>
+        </button>
+        <input
+          value={val}
+          onChange={e=>setVal(e.target.value)}
+          onKeyDown={e=>{
+            if(e.key==="Enter"&&!e.nativeEvent.isComposing){
+              e.preventDefault();
+              apply();
+            }
+          }}
+          placeholder="키워드 검색... (Enter)"
+          style={{background:"none",flex:1,fontSize:13,color:C.t,border:"none",outline:"none"}}
+        />
+        {val && (
+          <button onClick={()=>{setVal("");setKeyword("");}}
+            style={{background:"none",color:C.tm,padding:2,flexShrink:0}}>
+            <Ic n="x" s={12} c={C.tm}/>
+          </button>
+        )}
+      </div>
+    );
+  }
+
 export default function TrendRadar() {
   //
   const sidebarRef = useRef(null);
@@ -524,40 +559,6 @@ export default function TrendRadar() {
   `;
 
   // ---
-  // SearchBox: 독립 컴포넌트 — Sidebar 리렌더와 무관
-  const SearchBox = ({keyword, setKeyword}) => {
-    const [val, setVal] = useState(keyword);
-    const apply = () => setKeyword(val.trim());
-    return (
-      <div style={{
-        display:"flex", alignItems:"center", gap:9,
-        background:C.bg3, border:`1px solid ${C.b}`,
-        borderRadius:12, padding:"9px 12px", marginBottom:8,
-      }}>
-        <button onClick={apply} style={{background:"none",padding:2,flexShrink:0,cursor:"pointer"}}>
-          <Ic n="search" s={14} c={val?C.ac2:C.tm}/>
-        </button>
-        <input
-          value={val}
-          onChange={e=>setVal(e.target.value)}
-          onKeyDown={e=>{
-            if(e.key==="Enter"&&!e.nativeEvent.isComposing){
-              e.preventDefault();
-              apply();
-            }
-          }}
-          placeholder="키워드 검색... (Enter)"
-          style={{background:"none",flex:1,fontSize:13,color:C.t,border:"none",outline:"none"}}
-        />
-        {val && (
-          <button onClick={()=>{setVal("");setKeyword("");}}
-            style={{background:"none",color:C.tm,padding:2,flexShrink:0}}>
-            <Ic n="x" s={12} c={C.tm}/>
-          </button>
-        )}
-      </div>
-    );
-  };
 
   const Sidebar = () => (
     <aside ref={sidebarRef} style={{
