@@ -350,7 +350,18 @@ export default function TrendRadar() {
       if (diff > ms) return false;
     }
     //
-    if (catId !== "all") { if (getCat(item) !== catId) return false; }
+    if (catId !== "all") {
+      // catId가 대카테고리 id(ai, tech...)인지 서브카테고리 문자열인지 확인
+      const parentCat = CATS.find(c => c.id === catId);
+      if (parentCat) {
+        // 대카테고리 선택 -> getCat 결과와 직접 비교
+        if (getCat(item) !== catId) return false;
+      } else {
+        // 서브카테고리 선택 -> 해당 서브를 포함하는 대카테고리로 매칭 + 키워드 포함 검사
+        const owner = CATS.find(c => c.subs.includes(catId));
+        if (!owner || getCat(item) !== owner.id) return false;
+      }
+    }
     //
     if (heat !== "all")  { if (getHeat(item) !== heat) return false; }
     //
