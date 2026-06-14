@@ -515,7 +515,7 @@ export default function TrendRadar() {
   // ---
   // SearchBox: 독립 컴포넌트 — Sidebar 리렌더와 무관
   const SearchBox = ({keyword, setKeyword}) => {
-    const [val, setVal] = React.useState(keyword);
+    const [val, setVal] = useState(keyword);
     const apply = () => setKeyword(val.trim());
     return (
       <div style={{
