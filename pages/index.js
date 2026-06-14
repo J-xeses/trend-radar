@@ -228,6 +228,8 @@ export default function TrendRadar() {
   const [apiKey, setApiKey]       = useState(() =>
     typeof window !== "undefined" ? localStorage.getItem("tr_claude_key")||"" : "");
   const [showApiModal, setShowApiModal] = useState(false);
+  const [translations, setTranslations] = useState({}); // {itemId: "한글요약"}
+  const [translating, setTranslating]   = useState(false);
 
   const saveApiKey = (k) => {
     setApiKey(k);
@@ -360,6 +362,37 @@ export default function TrendRadar() {
   }, [region]);
 
   useEffect(() => { fetchAll(); }, [region]);
+
+  // 영어 비율이 높은 제목인지 판별 (한글 거의 없으면 영어로 간주)
+  const isEnglishTitle = (title) => {
+    const korean = (title.match(/[\uAC00-\uD7AF]/g) || []).length;
+    const alpha = (title.match(/[A-Za-z]/g) || []).length;
+    return alpha > 5 && korean < 2;
+  };
+
+  // 영어 제목 항목 일괄 번역 (items 갱신 시)
+  useEffect(() => {
+    if (!apiKey || items.length === 0) return;
+    const targets = items.filter(it => isEnglishTitle(it.title) && !translations[it.id]);
+    if (targets.length === 0) return;
+
+    setTranslating(true);
+    const batch = targets.slice(0, 40).map(it => ({ id: it.id, title: it.title }));
+
+    fetch("/api/analyze", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "translate_titles", items: batch, apiKey })
+    })
+      .then(r => r.json())
+      .then(d => {
+        const result = d.result || [];
+        const map = {};
+        result.forEach(r => { if (r.id && r.summary_ko) map[r.id] = r.summary_ko; });
+        setTranslations(prev => ({ ...prev, ...map }));
+      })
+      .catch(() => {})
+      .finally(() => setTranslating(false));
+  }, [items, apiKey]);
 
   // ---
   // period filter
