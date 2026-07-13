@@ -16,6 +16,7 @@ const Ic = ({ n, s=16, c="currentColor" }) => {
     plus:    <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
     check:   <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>,
     globe:   <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>,
+    music:   <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>,
   };
   return icons[n] || null;
 };
@@ -125,6 +126,15 @@ const ACTION_TABS = [
   { id:"youtube", label:"유튜브 벤치마킹", icon:"youtube", icon2:"📺",   color:"#ff4444", desc:"경쟁 영상 패턴 분석" },
   { id:"cross",   label:"교차분석",        icon:"zap",     color:C.am,   desc:"AI분석 × 유튜브 최종전략"     },
   { id:"pipeline",label:"파이프라인",      icon:"pipe",    color:C.g,    desc:"콘텐츠 제작 관리"              },
+  { id:"bgm",     label:"BGM 레이더",      icon:"music",   color:C.cy,   desc:"트렌드 무드에 맞는 무료 BGM 검색" },
+];
+
+// ---
+const BGM_MOODS = [
+  { id:"BGM_EMO",  label:"감성"    },
+  { id:"BGM_INFO", label:"정보전달" },
+  { id:"BGM_HOOK", label:"훅"      },
+  { id:"BGM_CALM", label:"차분"    },
 ];
 
 // ---
@@ -223,6 +233,12 @@ export default function TrendRadar() {
   const [crossResult, setCrossResult] = useState(null);
   const [crossLoading, setCrossLoading] = useState(false);
   const [pipe, setPipe]           = useState([]);
+  const [bgmMood, setBgmMood]         = useState("BGM_EMO");
+  const [bgmKeywords, setBgmKeywords] = useState("");
+  const [bgmResults, setBgmResults]   = useState([]);
+  const [bgmLoading, setBgmLoading]   = useState(false);
+  const [bgmStatus, setBgmStatus]     = useState("");
+  const [bgmDownloading, setBgmDownloading] = useState({}); // {idx: "loading"|"done"|"error"}
 
   //
   const [apiKey, setApiKey]       = useState(() =>
@@ -520,6 +536,46 @@ export default function TrendRadar() {
     setCrossLoading(false);
   }, [apiKey, analysis, ytResult]);
 
+  // BGM 레이더 — yeori-studio 프록시(localhost:3001)의 Chosic 검색/다운로드 엔드포인트 호출
+  const doBgmSearch = useCallback(async () => {
+    setBgmLoading(true); setBgmStatus("검색 중..."); setBgmResults([]);
+    try {
+      const res = await fetch("http://localhost:3001/api/bgm-search", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({
+          mood: bgmMood,
+          keywords: bgmKeywords.split(",").map(s=>s.trim()).filter(Boolean),
+          source: "chosic",
+        })
+      });
+      const d = await res.json();
+      if (d.error) {
+        setBgmStatus(`❌ ${d.error}`);
+      } else {
+        setBgmResults(d.results || []);
+        setBgmStatus(d.message || `${(d.results||[]).length}건 검색됨`);
+      }
+    } catch(e) {
+      setBgmStatus(`❌ 검색 실패: ${e.message} (yeori-studio 프록시 서버가 켜져 있는지 확인하세요)`);
+    }
+    setBgmLoading(false);
+  }, [bgmMood, bgmKeywords]);
+
+  const doBgmDownload = useCallback(async (item, idx) => {
+    setBgmDownloading(s => ({...s, [idx]:"loading"}));
+    try {
+      const filename = (item.title||"bgm").replace(/[\\/:*?"<>|]/g,"").trim() + ".mp3";
+      const res = await fetch("http://localhost:3001/api/bgm-download", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({ url: item.downloadUrl||item.url, mood: bgmMood, filename })
+      });
+      const d = await res.json();
+      setBgmDownloading(s => ({...s, [idx]: d.success ? "done" : "error"}));
+    } catch {
+      setBgmDownloading(s => ({...s, [idx]:"error"}));
+    }
+  }, [bgmMood]);
+
   const addToPipe = useCallback((item) => {
     setPipe(p => {
       if (p.find(x=>x.id===item.id)) return p;
@@ -800,6 +856,7 @@ export default function TrendRadar() {
           youtube: ytResult?1:null,
           cross:   crossResult?1:null,
           pipeline:pipe.length||null,
+          bgm:     bgmResults.length||null,
         };
         const badge = badges[at.id];
         return (
@@ -1505,6 +1562,104 @@ export default function TrendRadar() {
     </div>
   );
 
+  // ---
+  const BgmPanel = () => {
+    const trendChips = filtered.slice(0, 10).map(i=>i.title).filter(Boolean);
+    return (
+      <div style={{padding:"22px"}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
+          <span style={{fontSize:16,fontWeight:800,color:C.t}}>BGM 레이더</span>
+          <span style={{
+            fontSize:10,fontFamily:C.m,padding:"2px 9px",borderRadius:20,
+            background:C.cyd,border:`1px solid ${C.cyb}`,color:C.cy,
+          }}>Chosic 무료 CC BY</span>
+        </div>
+
+        <div style={{fontSize:11,fontWeight:700,color:C.tm,marginBottom:8}}>분위기 코드</div>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:16}}>
+          {BGM_MOODS.map(m=>(
+            <button key={m.id} onClick={()=>setBgmMood(m.id)}
+              style={{
+                padding:"7px 12px",borderRadius:9,fontSize:12,fontWeight:700,
+                background: bgmMood===m.id ? C.acd : C.bg2,
+                border:`1px solid ${bgmMood===m.id ? C.acb : C.b}`,
+                color: bgmMood===m.id ? C.ac2 : C.ts,
+              }}>{m.id} · {m.label}</button>
+          ))}
+        </div>
+
+        {trendChips.length>0 && (
+          <>
+            <div style={{fontSize:11,fontWeight:700,color:C.tm,marginBottom:8}}>현재 수집된 트렌드 키워드</div>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}}>
+              {trendChips.map((t,i)=>(
+                <span key={i} onClick={()=>setBgmKeywords(t)} title={t}
+                  style={{
+                    padding:"5px 10px",borderRadius:20,fontSize:11,color:C.ts,
+                    background:C.bg2,border:`1px solid ${C.b}`,cursor:"pointer",
+                    maxWidth:220,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
+                  }}>{t}</span>
+              ))}
+            </div>
+          </>
+        )}
+
+        <div style={{display:"flex",gap:8,marginBottom:14}}>
+          <input value={bgmKeywords} onChange={e=>setBgmKeywords(e.target.value)}
+            placeholder="검색 키워드 (쉼표로 구분)"
+            style={{
+              flex:1,padding:"9px 12px",borderRadius:9,fontSize:13,
+              background:C.bg2,border:`1px solid ${C.b}`,color:C.t,
+            }}/>
+          <button onClick={doBgmSearch} disabled={bgmLoading}
+            style={{
+              padding:"9px 18px",borderRadius:9,fontSize:13,fontWeight:800,
+              background:C.acd,border:`1px solid ${C.acb}`,color:C.ac2,
+              opacity:bgmLoading?.5:1,
+            }}>{bgmLoading?"검색 중...":"🔍 BGM 검색"}</button>
+        </div>
+
+        {bgmStatus && <div style={{fontSize:12,color:C.tm,marginBottom:12}}>{bgmStatus}</div>}
+
+        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+          {bgmResults.map((item,i)=>{
+            const dlState = bgmDownloading[i];
+            return (
+              <div key={i} style={{
+                background:C.bg2,border:`1px solid ${C.b}`,borderRadius:14,padding:"14px 16px",
+              }}>
+                <div style={{fontSize:14,fontWeight:700,color:C.t}}>{item.title}</div>
+                {item.artist && <div style={{fontSize:11,color:C.tm,marginTop:2}}>{item.artist}</div>}
+                <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:8}}>
+                  <span style={{fontSize:10,fontFamily:C.m,padding:"3px 8px",borderRadius:6,background:C.bg3,color:C.ts}}>BPM: {item.bpm || "—"}</span>
+                  <span style={{fontSize:10,fontFamily:C.m,padding:"3px 8px",borderRadius:6,background:C.bg3,color:C.ts}}>분위기: {item.mood || "—"}</span>
+                  <span style={{fontSize:10,fontFamily:C.m,padding:"3px 8px",borderRadius:6,background:C.bg3,color:C.ts}}>길이: {item.duration || "—"}</span>
+                </div>
+                <div style={{fontSize:10,color:C.tm,marginTop:8,lineHeight:1.5}}>{item.license}</div>
+                {item.previewUrl && <audio controls preload="none" src={item.previewUrl} style={{width:"100%",height:32,marginTop:8}}/>}
+                <button onClick={()=>doBgmDownload(item,i)} disabled={dlState==="loading"}
+                  style={{
+                    width:"100%",marginTop:8,padding:"8px",borderRadius:8,fontSize:12,fontWeight:700,
+                    background:C.bg3,border:`1px solid ${C.b}`,color:C.t,
+                  }}>
+                  {dlState==="loading" ? "⏳ 다운로드 중..." : dlState==="done" ? "✅ 저장됨" : dlState==="error" ? "❌ 실패 (재시도)" : "⬇ 다운로드"}
+                </button>
+              </div>
+            );
+          })}
+          {!bgmLoading && bgmResults.length===0 && (
+            <div style={{textAlign:"center",padding:"70px 20px"}}>
+              <div style={{fontSize:48,marginBottom:14,opacity:.35}}>🎵</div>
+              <div style={{fontSize:17,fontWeight:700,marginBottom:8}}>분위기를 고르고 검색해보세요</div>
+              <div style={{fontSize:13,color:C.tm,lineHeight:1.8}}>
+                위 트렌드 키워드 칩을 누르면 검색어에 자동으로 채워져요
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   // ---
   return (
@@ -1632,6 +1787,7 @@ export default function TrendRadar() {
               {actionTab==="youtube"  && <YoutubePanel/>}
               {actionTab==="cross"    && <CrossPanel/>}
               {actionTab==="pipeline" && <PipelinePanel/>}
+              {actionTab==="bgm"      && <BgmPanel/>}
             </div>
           </main>
         </div>
