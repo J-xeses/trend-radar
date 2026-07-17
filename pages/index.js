@@ -241,11 +241,15 @@ export default function TrendRadar() {
   const [bgmDownloading, setBgmDownloading] = useState({}); // {idx: "loading"|"done"|"error"}
 
   //
-  const [apiKey, setApiKey]       = useState(() =>
-    typeof window !== "undefined" ? localStorage.getItem("tr_claude_key")||"" : "");
+  const [apiKey, setApiKey]       = useState(""); // SSR과 항상 일치하도록 빈 값으로 시작, 마운트 후 useEffect에서 localStorage 값 반영 (hydration mismatch 방지)
   const [showApiModal, setShowApiModal] = useState(false);
   const [translations, setTranslations] = useState({}); // {itemId: "한글요약"}
   const [translating, setTranslating]   = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("tr_claude_key");
+    if (saved) setApiKey(saved);
+  }, []);
 
   const saveApiKey = (k) => {
     setApiKey(k);
@@ -1668,7 +1672,7 @@ export default function TrendRadar() {
         <title>TREND RADAR v7</title>
         <meta name="viewport" content="width=device-width,initial-scale=1"/>
       </Head>
-      <style>{css}</style>
+      <style dangerouslySetInnerHTML={{ __html: css }} />
 
       <div style={{minHeight:"100vh",background:C.bg,display:"grid",gridTemplateRows:"56px 1fr"}}>
 
