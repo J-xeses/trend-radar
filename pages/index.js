@@ -485,19 +485,21 @@ export default function TrendRadar() {
       const d = await res.json();
       setAnalysis(d.result ? {...d.result,title:item.title} : {error:d.error||"분석 실패"});
       if (d.result?.videos?.[0]) setYtKeyword(d.result.videos[0].title||item.title);
+      if (d.result) setPipe(p => p.map(x => x.id===item.id ? {...x, aiDone:true} : x));
     } catch(e) { setAnalysis({error:e.message}); }
     setAnalysisLoading(false);
   }, [apiKey]);
 
-  const doYoutubeBench = useCallback(async () => {
+  const doYoutubeBench = useCallback(async (keywordOverride) => {
     if (!apiKey) { setShowApiModal(true); return; }
-    if (!ytKeyword.trim()) return;
+    const kw = (keywordOverride || ytKeyword || "").trim();
+    if (!kw) return;
     setYtLoading(true); setYtResult(null); setActionTab("youtube");
     try {
       // 1. YouTube Data API로 실제 영상 검색
       const ytRegionNow = region === "all" ? "US" : region;
       const searchRes = await fetch(
-        `/api/youtube?type=search&q=${encodeURIComponent(ytKeyword)}&region=${ytRegionNow}`
+        `/api/youtube?type=search&q=${encodeURIComponent(kw)}&region=${ytRegionNow}`
       );
       const searchData = await searchRes.json();
       const videos = searchData.videos || [];
@@ -507,7 +509,7 @@ export default function TrendRadar() {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
           type:"youtube_benchmark",
-          keyword:ytKeyword,
+          keyword:kw,
           videos: videos.slice(0,10).map(v=>({
             title:v.title,
             channel:v.channel,
@@ -519,12 +521,13 @@ export default function TrendRadar() {
       });
       const d = await res.json();
       setYtResult(d.result
-        ? {...d.result, keyword:ytKeyword, videos}
+        ? {...d.result, keyword:kw, videos}
         : {error:d.error, videos}
       );
+      if (d.result && selItem) setPipe(p => p.map(x => x.id===selItem.id ? {...x, ytDone:true} : x));
     } catch(e) { setYtResult({error:e.message}); }
     setYtLoading(false);
-  }, [apiKey, ytKeyword, region]);
+  }, [apiKey, ytKeyword, region, selItem]);
 
   const doCross = useCallback(async () => {
     if (!apiKey || !analysis || !ytResult) return;
@@ -536,9 +539,10 @@ export default function TrendRadar() {
       });
       const d = await res.json();
       setCrossResult(d.result||{error:d.error});
+      if (d.result && selItem) setPipe(p => p.map(x => x.id===selItem.id ? {...x, crossDone:true} : x));
     } catch(e) { setCrossResult({error:e.message}); }
     setCrossLoading(false);
-  }, [apiKey, analysis, ytResult]);
+  }, [apiKey, analysis, ytResult, selItem]);
 
   // BGM 레이더 — yeori-studio 프록시(localhost:3001)의 Chosic 검색/다운로드 엔드포인트 호출
   const doBgmSearch = useCallback(async () => {
@@ -587,11 +591,35 @@ export default function TrendRadar() {
         id:item.id, trend:item.title, source:item.source,
         stage:"발굴됨", score:calcScore(item),
         added:new Date().toLocaleString("ko-KR"),
+        origItem:item, aiDone:false, ytDone:false, crossDone:false, sentToPool:false,
       }];
     });
     setActionTab("pipeline");
   }, []);
 
+  // 파이프라인 카드의 "후보풀로 전송" 버튼 -- yeori-studio proxy.js를 거쳐
+  // content_matrix_v3.html 사이드바의 "🔥 트렌드 분석" 목록에 전달한다.
+  // (TREND RADAR와 content_matrix_v3.html은 origin이 달라 localStorage 직접
+  // 공유가 안 되므로, 서버 저장을 거치는 게 유일한 방법)
+  const sendToCandidatePool = useCallback(async (pipeItem) => {
+    const isCurrent = selItem?.id === pipeItem.id;
+    const topic = (isCurrent && analysis?.summary_ko) || crossResult?.why_win || "";
+    try {
+      const res = await fetch("http://localhost:3001/api/trend-to-candidate", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({
+          id: pipeItem.id, title: pipeItem.trend, source: pipeItem.source, score: pipeItem.score,
+          keyword: pipeItem.origItem?.title || pipeItem.trend, topic,
+          steps: { ai: pipeItem.aiDone, youtube: pipeItem.ytDone, cross: pipeItem.crossDone },
+        }),
+      });
+      const d = await res.json();
+      if (!d.success) throw new Error(d.error || "전송 실패");
+      setPipe(p => p.map(x => x.id===pipeItem.id ? {...x, sentToPool:true} : x));
+    } catch (e) {
+      alert("후보풀 전송 실패: " + e.message + "\n(yeori-studio proxy.js가 localhost:3001에서 실행 중인지 확인해주세요)");
+    }
+  }, [selItem, analysis, crossResult]);
 
   // ─── CSS ─────────────────────────────────────────────────
   const css = `
@@ -1213,7 +1241,7 @@ export default function TrendRadar() {
               color:C.t,fontSize:14,
             }}
           />
-          <button onClick={doYoutubeBench} disabled={ytLoading||!ytKeyword.trim()}
+          <button onClick={()=>doYoutubeBench()} disabled={ytLoading||!ytKeyword.trim()}
             style={{
               padding:"10px 22px",borderRadius:10,
               background:"linear-gradient(135deg,#ff4444,#ff6666)",
@@ -1552,12 +1580,22 @@ export default function TrendRadar() {
                 </button>
               </div>
               <div style={{display:"flex",gap:6,marginTop:12,flexWrap:"wrap"}}>
-                {["🤖 AI분석","📺 유튜브","⚡ 교차분석","🎬 대본생성"].map(btn=>(
-                  <button key={btn} style={{
+                {[
+                  {l:"AI분석", done:item.aiDone, fn:()=>doAnalyze(item.origItem||{id:item.id,title:item.trend,source:item.source})},
+                  {l:"유튜브", done:item.ytDone, fn:()=>{ setSelItem(item.origItem||{id:item.id,title:item.trend}); doYoutubeBench(item.trend); }},
+                  {l:"교차분석", done:item.crossDone, fn:doCross},
+                ].map(btn=>(
+                  <button key={btn.l} onClick={btn.fn} style={{
                     padding:"6px 11px",borderRadius:9,fontSize:11,fontWeight:700,
-                    background:C.bg3,border:`1px solid ${C.b}`,color:C.ts,
-                  }}>{btn}</button>
+                    background:btn.done?C.acd:C.bg3, border:`1px solid ${btn.done?C.acb:C.b}`,
+                    color:btn.done?C.ac2:C.ts,
+                  }}>{btn.done?"✅":""}{btn.l}</button>
                 ))}
+                <button onClick={()=>sendToCandidatePool(item)} disabled={item.sentToPool} style={{
+                  padding:"6px 11px",borderRadius:9,fontSize:11,fontWeight:700,
+                  background:item.sentToPool?C.bg3:C.gd, border:`1px solid ${item.sentToPool?C.b:C.gb}`,
+                  color:item.sentToPool?C.tm:C.g, cursor:item.sentToPool?"default":"pointer",
+                }}>{item.sentToPool?"✓ 전송됨":"→ 후보풀로 전송"}</button>
               </div>
             </div>
           ))}
