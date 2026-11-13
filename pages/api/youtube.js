@@ -35,7 +35,8 @@ export default async function handler(req, res) {
     if (type === "search" && q) {
       if (!YT_KEY) return res.status(200).json({ videos: [], error: "YOUTUBE_API_KEY not set" });
       const lang = req.query.lang || "ko";
-      const url = "https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=" + encodeURIComponent(q) + "&regionCode=" + regionCode + "&relevanceLanguage=" + lang + "&maxResults=15&order=viewCount&key=" + YT_KEY;
+      const durParam = req.query.dur === "short" ? "&videoDuration=short" : ""; // short = 4분 미만
+      const url = "https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=" + encodeURIComponent(q) + "&regionCode=" + regionCode + "&relevanceLanguage=" + lang + durParam + "&maxResults=15&order=viewCount&key=" + YT_KEY;
       const r = await fetch(url);
       if (!r.ok) { const e = await r.json(); throw new Error(e?.error?.message || "YouTube search error: " + r.status); }
       const data = await r.json();
@@ -53,16 +54,21 @@ export default async function handler(req, res) {
         }
       }
 
+      // search 결과 snippet 제목은 HTML 엔티티로 인코딩돼 옴(&#39; 등)
+      const decode = (s) => (s || "").replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
       const videos = items.map(item => {
         const vid = item.id?.videoId;
         const stats = statsMap[vid];
         const views = parseInt(stats?.statistics?.viewCount || "0");
         const duration = stats?.contentDetails?.duration || "";
-        const isShorts = duration.includes("PT") && !duration.includes("M") && parseInt(duration.replace(/PT|S/g,"")) <= 60;
+        // ISO8601(PT#H#M#S) → 초. 쇼츠는 2024-10부터 최대 3분까지 허용됨
+        const dm = duration.match(/^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/);
+        const seconds = dm ? (+(dm[1]||0))*3600 + (+(dm[2]||0))*60 + (+(dm[3]||0)) : 0;
+        const isShorts = seconds > 0 && seconds <= 180;
         return {
           id: vid,
-          title: item.snippet?.title || "",
-          channel: item.snippet?.channelTitle || "",
+          title: decode(item.snippet?.title),
+          channel: decode(item.snippet?.channelTitle),
           thumbnail: item.snippet?.thumbnails?.medium?.url || "",
           publishedAt: item.snippet?.publishedAt?.substring(0,10) || "",
           publishedAtFull: item.snippet?.publishedAt || "",

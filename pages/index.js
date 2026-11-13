@@ -572,7 +572,7 @@ export default function TrendRadar() {
       // 11. 니치 바이럴 클립 — 유튜브 쇼츠 검색, 카테고리별 (영어 키워드로 글로벌 소스 타게팅)
       // ⚠️ search.list는 quota 100단위/호출 — 6개 호출 = 새로고침 1회당 600단위 (일일 1만 기준 넉넉함)
       ...NICHE_CATEGORIES.map(cat =>
-        fetch(`/api/youtube?type=search&q=${encodeURIComponent(cat.ytQuery)}&region=US&lang=en`)
+        fetch(`/api/youtube?type=search&q=${encodeURIComponent(cat.ytQuery)}&region=US&lang=en&dur=short`)
           .then(r => r.json())
           .then(d => {
             const videos = (d?.videos || []).filter(v => v.isShorts);
@@ -682,7 +682,9 @@ export default function TrendRadar() {
     }
     //
     const ms = periodMs[period];
-    if (ms && item.time) {
+    // 니치 바이럴 클립은 "이미 다뤄진 소재도 재구성 재료"라 업로드 시점으로 거르지 않는다(급상승 여부는 ⚡속도로 판단)
+    const isNiche = item.source.startsWith("niche_");
+    if (ms && item.time && !isNiche) {
       const diff = Date.now() - new Date(item.time).getTime();
       if (diff > ms) return false;
     }
