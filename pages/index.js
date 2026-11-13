@@ -666,23 +666,30 @@ export default function TrendRadar() {
     let cancelled = false;
     (async () => {
       setTranslating(true);
-      // 예전엔 앞 40개만 보내고 끝나서 나머지는 영영 요약이 안 붙었음 → 30개씩 끝까지 순차 처리
-      for (let i = 0; i < targets.length && !cancelled; i += 30) {
-        const chunk = targets.slice(i, i + 30);
-        const batch = chunk.map((it, k) => ({ id: `t${i + k}`, title: it.title, context: it.extra?.newsTitle || undefined }));
-        try {
-          const r = await fetch("/api/analyze", {
-            method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ type: "translate_titles", items: batch, apiKey })
-          });
-          const d = await r.json();
-          if (!r.ok) break; // 키 없음/오류면 더 보내지 않음
-          const byId = Object.fromEntries(batch.map(b => [b.id, b.title]));
-          const map = {};
-          (d.result || []).forEach(x => { if (byId[x.id] && x.summary_ko) map[byId[x.id]] = x.summary_ko; });
-          if (!cancelled) setTranslations(prev => ({ ...prev, ...map }));
-        } catch { break; }
-      }
+      // 15개씩 묶어 최대 4개 요청을 동시에 — 순차 30개 묶음은 묶음당 25~28초라 전체 3분가량 걸렸음(실측)
+      const BATCH = 15, CONCURRENCY = 4;
+      const chunks = [];
+      for (let i = 0; i < targets.length; i += BATCH) chunks.push(targets.slice(i, i + BATCH));
+      let next = 0, failed = false;
+      const worker = async () => {
+        while (!cancelled && !failed && next < chunks.length) {
+          const ci = next++;
+          const batch = chunks[ci].map((it, k) => ({ id: `t${ci}_${k}`, title: it.title, context: it.extra?.newsTitle || undefined }));
+          try {
+            const r = await fetch("/api/analyze", {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ type: "translate_titles", items: batch, apiKey })
+            });
+            const d = await r.json();
+            if (!r.ok) { failed = true; return; } // 키 없음/오류면 더 보내지 않음
+            const byId = Object.fromEntries(batch.map(b => [b.id, b.title]));
+            const map = {};
+            (d.result || []).forEach(x => { if (byId[x.id] && x.summary_ko) map[byId[x.id]] = x.summary_ko; });
+            if (!cancelled) setTranslations(prev => ({ ...prev, ...map }));
+          } catch { failed = true; return; }
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(CONCURRENCY, chunks.length) }, worker));
       if (!cancelled) setTranslating(false);
     })();
     return () => { cancelled = true; setTranslating(false); };

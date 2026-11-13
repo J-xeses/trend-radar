@@ -1,6 +1,8 @@
 // pages/api/analyze.js
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 const MODEL = "claude-fable-5-2";
+// 제목 한 줄 번역은 단순 작업 — Fable은 30개 묶음에 25~28초 걸려 체감 지연이 컸음(실측). 빠른 모델 우선, 실패 시 MODEL로 폴백.
+const FAST_MODEL = "claude-haiku-5-5";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -70,17 +72,34 @@ JSON만 응답: {"summary_ko":"...","hook_point":"...","retention_secret":"...",
     return res.status(400).json({ error: "type은 analyze, script, youtube_benchmark, cross_analysis, channel_analysis, drama_prompt, translate_titles, assess_clip 중 하나." });
   }
   try {
-    const response = await fetch(ANTHROPIC_URL, {
+    const callModel = (model) => fetch(ANTHROPIC_URL, {
       method: "POST",
       headers: {"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01"},
-      body: JSON.stringify({model:MODEL, max_tokens: type==="translate_titles" ? 4000 : 1500, messages:[{role:"user",content:prompt}]}),
+      // Fable 5.2(항상)·Haiku 5.5(기본) 모두 thinking이 켜져 있어 그 토큰도 max_tokens에 포함됨 — 넉넉히.
+      // 번역은 단순 작업이라 effort low로 속도 우선.
+      body: JSON.stringify({
+        model, max_tokens: 8000,
+        ...(type === "translate_titles" ? { output_config: { effort: "low" } } : {}),
+        messages:[{role:"user",content:prompt}],
+      }),
     });
+    let response = await callModel(type === "translate_titles" ? FAST_MODEL : MODEL);
+    if (!response.ok && type === "translate_titles" && response.status !== 401) {
+      response = await callModel(MODEL);
+    }
     if (!response.ok) {
       const e = await response.json();
       return res.status(response.status).json({error: e?.error?.message || "Claude API 오류"});
     }
     const data = await response.json();
-    const raw = data.content?.[0]?.text || "";
+    // 첫 블록은 thinking 블록이라 content[0].text는 항상 비어 있었음 → text 블록만 모은다
+    const raw = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("");
+    if (data.stop_reason === "refusal") {
+      return res.status(502).json({ error: "모델이 요청을 거절함", category: data.stop_details?.category || null });
+    }
+    if (!raw.trim()) {
+      return res.status(502).json({ error: "빈 응답", stop_reason: data.stop_reason, blocks: (data.content || []).map(b => b.type) });
+    }
     const cleaned = raw.replace(/```json\n?|\n?```/g,"").trim();
     // 배열 응답(translate_titles) 또는 객체 응답 모두 처리
     const isArray = type === "translate_titles";
