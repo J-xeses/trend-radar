@@ -75,6 +75,12 @@ const SRC_GROUPS = [
       { id:"google_global", label:"글로벌",     icon:"🌍", color:C.ac },
     ]
   },
+  { id:"world",  label:"월드 이슈", icon:"🌍", color:"#38bdf8",
+    sources:[
+      { id:"news_world",    label:"Google 뉴스 월드",   icon:"📰", color:"#38bdf8" },
+      { id:"youtube_world", label:"유튜브 글로벌 급상승", icon:"▶", color:"#0ea5e9" },
+    ]
+  },
 ];
 
 // ---
@@ -139,6 +145,7 @@ const ACTION_TABS = [
   { id:"youtube", label:"유튜브 벤치마킹", icon:"youtube", icon2:"📺",   color:"#ff4444", desc:"경쟁 영상 패턴 분석" },
   { id:"cross",   label:"교차분석",        icon:"zap",     color:C.am,   desc:"AI분석 × 유튜브 최종전략"     },
   { id:"pipeline",label:"파이프라인",      icon:"pipe",    color:C.g,    desc:"콘텐츠 제작 관리"              },
+  { id:"issues",  label:"이슈 후보",       icon:"globe",   color:"#38bdf8", desc:"전세계 이슈 1차 분석·제작 가능성 추적" },
   { id:"bgm",     label:"BGM 레이더",      icon:"music",   color:C.cy,   desc:"트렌드 무드에 맞는 무료 BGM 검색" },
 ];
 
@@ -246,6 +253,10 @@ export default function TrendRadar() {
   const [crossResult, setCrossResult] = useState(null);
   const [crossLoading, setCrossLoading] = useState(false);
   const [pipe, setPipe]           = useState([]);
+  const [issues, setIssues]       = useState([]);
+  const [issuesLoading, setIssuesLoading] = useState(false);
+  const [issueFilter, setIssueFilter]     = useState("all"); // all|new|reviewing|adopted|produced|dropped
+  const [issueAnalyzing, setIssueAnalyzing] = useState({}); // {id:true}
   const [bgmMood, setBgmMood]         = useState("BGM_EMO");
   const [bgmKeywords, setBgmKeywords] = useState("");
   const [bgmResults, setBgmResults]   = useState([]);
@@ -527,6 +538,52 @@ export default function TrendRadar() {
           st.naver_news = d.error && !parsed.length ? { ok:false, n:0, err:d.error } : { ok:true, n:parsed.length };
         }).catch(e => { st.naver_news = { ok:false, n:0, err:e.message }; }),
 
+      // 11. Google 뉴스 — 월드(영어) — 전세계 이슈 발굴용
+      fetch("/api/googlenews?topic=world")
+        .then(r=>r.json())
+        .then(d => {
+          const parsed = (d?.items||[]).map((it,i) => ({
+            id:`gnw_${i}_${Date.now()}`, source:"news_world",
+            title: it.title,
+            url:   it.url,
+            score: Math.max(25, 88 - i*3),
+            time:  it.pubDate ? new Date(it.pubDate).toISOString() : new Date().toISOString(),
+            extra: { press: it.source },
+          }));
+          all.push(...parsed);
+          st.news_world = { ok:true, n:parsed.length };
+        }).catch(e => { st.news_world = { ok:false, n:0, err:e.message }; }),
+
+      // 12. 유튜브 글로벌 급상승 — 여러 국가 루프 (이미 영상화된 세계 이슈 포착)
+      ...["US","GB","IN","BR","JP"].map(cc =>
+        fetch(`/api/youtube?type=trending&region=${cc}`)
+          .then(r => r.json())
+          .then(d => {
+            try {
+              const xml = new DOMParser().parseFromString(d.xml||"","text/xml");
+              const entries = Array.from(xml.querySelectorAll("entry"));
+              if (!entries.length) throw new Error("empty");
+              const parsed = entries.slice(0,8).map((e,i) => {
+                const linkEl = e.querySelector("link");
+                const href = linkEl?.getAttribute("href") || linkEl?.textContent || "";
+                return {
+                  id:`ytw_${cc}_${Date.now()}_${i}`, source:"youtube_world",
+                  title: e.querySelector("title")?.textContent||"",
+                  url:   href,
+                  score: Math.max(20, 85 - i*4),
+                  time:  e.querySelector("published")?.textContent||"",
+                  extra: {
+                    channel: e.querySelector("author name")?.textContent||"",
+                    country: cc,
+                  }
+                };
+              });
+              all.push(...parsed);
+              st.youtube_world = { ok:true, n:(st.youtube_world?.n||0)+parsed.length };
+            } catch(e) { /* 국가별 키/쿼터 문제는 조용히 스킵 — 다른 국가는 계속 수집 */ }
+          }).catch(() => {})
+      ),
+
     ]);
 
     setItems(all);
@@ -758,6 +815,74 @@ export default function TrendRadar() {
     });
     setActionTab("pipeline");
   }, []);
+
+  // ─── 이슈 후보 파이프라인 (후보풀 대체 — 1차 분석 + 상태 추적) ───
+  const loadIssues = useCallback(async () => {
+    setIssuesLoading(true);
+    try {
+      const res = await fetch("/api/issues");
+      const d = await res.json();
+      setIssues(d.items || []);
+    } catch {}
+    setIssuesLoading(false);
+  }, []);
+
+  useEffect(() => { loadIssues(); }, [loadIssues]);
+
+  const addToIssuePool = useCallback(async (item) => {
+    try {
+      const res = await fetch("/api/issues", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: item.title, url: item.url || "", source: item.source,
+          country: item.extra?.country || "",
+        })
+      });
+      const d = await res.json();
+      if (d.item) {
+        setIssues(prev => {
+          const exists = prev.find(x => x.id === d.item.id);
+          return exists ? prev.map(x => x.id===d.item.id ? d.item : x) : [d.item, ...prev];
+        });
+      }
+      setActionTab("issues");
+    } catch {}
+  }, []);
+
+  const updateIssueStatus = useCallback(async (id, status) => {
+    setIssues(prev => prev.map(x => x.id===id ? { ...x, status } : x));
+    try {
+      await fetch("/api/issues", {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, status })
+      });
+    } catch {}
+  }, []);
+
+  const assessIssue = useCallback(async (issueItem) => {
+    setIssueAnalyzing(s => ({ ...s, [issueItem.id]: true }));
+    try {
+      const res = await fetch("/api/analyze", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "assess_issue",
+          issue: { title: issueItem.title, source: issueItem.source, url: issueItem.url },
+          apiKey,
+        })
+      });
+      const d = await res.json();
+      if (d.result) {
+        const analysis = { ...d.result, analyzedAt: new Date().toISOString() };
+        const nextStatus = issueItem.status === "new" ? "reviewing" : issueItem.status;
+        setIssues(prev => prev.map(x => x.id===issueItem.id ? { ...x, analysis, status: nextStatus } : x));
+        fetch("/api/issues", {
+          method: "PATCH", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: issueItem.id, analysis, status: nextStatus })
+        }).catch(() => {});
+      }
+    } catch {}
+    setIssueAnalyzing(s => { const n = { ...s }; delete n[issueItem.id]; return n; });
+  }, [apiKey]);
 
   // 파이프라인 카드의 "후보풀로 전송" 버튼 -- yeori-studio proxy.js를 거쳐
   // content_matrix_v3.html 사이드바의 "🔥 트렌드 분석" 목록에 전달한다.
@@ -1233,6 +1358,8 @@ export default function TrendRadar() {
                    bg:"rgba(255,68,68,.1)", bc:"rgba(255,68,68,.25)", tc:"#ff8080"},
                   {l:"📋 파이프라인",fn:e=>{e.stopPropagation();addToPipe(item);},
                    bg:C.gd, bc:C.gb, tc:C.g},
+                  {l:"🌍 이슈후보",  fn:e=>{e.stopPropagation();addToIssuePool(item);},
+                   bg:"rgba(56,189,248,.1)", bc:"rgba(56,189,248,.3)", tc:"#38bdf8"},
                 ].map(btn=>(
                   <button key={btn.l} onClick={btn.fn}
                     style={{
@@ -1766,6 +1893,119 @@ export default function TrendRadar() {
     </div>
   );
 
+  // ─── 이슈 후보 파이프라인 — 세계 이슈 쇼츠 채널용 "발굴→1차분석→상태추적" ───
+  const ISSUE_STATUS = [
+    { id:"new",       label:"신규",   color:C.ts },
+    { id:"reviewing", label:"검토중", color:C.am },
+    { id:"adopted",   label:"채택",   color:C.g  },
+    { id:"produced",  label:"제작완료", color:C.ac2 },
+    { id:"dropped",   label:"드랍",   color:C.tm },
+  ];
+  const IssuesPanel = () => {
+    const visible = issueFilter==="all" ? issues : issues.filter(x=>x.status===issueFilter);
+    return (
+      <div style={{padding:"22px"}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6,flexWrap:"wrap"}}>
+          <span style={{fontSize:16,fontWeight:800,color:C.t}}>이슈 후보</span>
+          <span style={{
+            fontSize:10,fontFamily:C.m,padding:"2px 9px",borderRadius:20,
+            background:"rgba(56,189,248,.12)",border:"1px solid rgba(56,189,248,.3)",color:"#38bdf8",
+          }}>{issues.length}개</span>
+          <button onClick={loadIssues} style={{
+            marginLeft:"auto",fontSize:10,fontFamily:C.m,color:C.tm,
+            background:"none",padding:"4px 8px",
+          }}>{issuesLoading?"새로고침 중...":"↻ 새로고침"}</button>
+        </div>
+        <div style={{fontSize:11.5,color:C.tm,lineHeight:1.7,marginBottom:14}}>
+          트렌드 목록에서 🌍 이슈후보 버튼으로 등록 → "1차 분석"으로 제작 가능성(시각자료·리스크·신선도·공감도) 판단 →
+          상태를 바꿔가며 추적하세요. (로컬 실행 중에만 저장됩니다 — <code style={{color:C.ts}}>npm run dev</code>)
+        </div>
+        <div style={{display:"flex",gap:6,marginBottom:16,flexWrap:"wrap"}}>
+          {[{id:"all",label:"전체",color:C.ts}, ...ISSUE_STATUS].map(s=>(
+            <button key={s.id} onClick={()=>setIssueFilter(s.id)} style={{
+              padding:"5px 11px",borderRadius:20,fontSize:11,fontWeight:700,
+              background:issueFilter===s.id?`${s.color}20`:C.bg2,
+              border:`1px solid ${issueFilter===s.id?s.color+"50":C.b}`,
+              color:issueFilter===s.id?s.color:C.tm,
+            }}>{s.label} {s.id==="all"?issues.length:issues.filter(x=>x.status===s.id).length}</button>
+          ))}
+        </div>
+
+        {visible.length===0 ? (
+          <div style={{textAlign:"center",padding:"70px 20px"}}>
+            <div style={{fontSize:48,marginBottom:14,opacity:.35}}>🌍</div>
+            <div style={{fontSize:17,fontWeight:700,marginBottom:8}}>이슈 후보가 비어있어요</div>
+            <div style={{fontSize:13,color:C.tm,lineHeight:1.8}}>
+              트렌드 목록(월드 이슈 그룹 추천)에서 🌍 이슈후보 버튼을 눌러보세요
+            </div>
+          </div>
+        ) : (
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            {visible.map((item,i)=>{
+              const st = ISSUE_STATUS.find(s=>s.id===item.status) || ISSUE_STATUS[0];
+              const a = item.analysis;
+              return (
+                <div key={item.id} style={{
+                  background:C.bg2,border:`1px solid ${C.b}`,borderRadius:14,padding:"16px 18px",
+                  animation:"fadeUp .25s ease both", animationDelay:`${i*.03}s`,
+                }}>
+                  <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:14,fontWeight:700,color:C.t,marginBottom:7,lineHeight:1.4}}>
+                        {item.url ? <a href={item.url} target="_blank" rel="noreferrer" style={{color:"inherit",textDecoration:"none"}}>{item.title}</a> : item.title}
+                      </div>
+                      <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+                        <span style={{fontSize:10,fontFamily:C.m,color:C.tm}}>{item.source}{item.country?` · ${item.country}`:""}</span>
+                        <span style={{fontSize:10,fontFamily:C.m,color:C.tm}}>{timeAgo(item.lastSeenAt)}</span>
+                        {item.seenCount>1 && <span style={{fontSize:10,fontFamily:C.m,color:C.tm}}>{item.seenCount}회 재등장</span>}
+                      </div>
+                    </div>
+                    <select value={item.status} onChange={e=>updateIssueStatus(item.id, e.target.value)} style={{
+                      fontSize:11,fontFamily:C.m,fontWeight:700,padding:"5px 8px",borderRadius:8,
+                      background:`${st.color}18`,border:`1px solid ${st.color}50`,color:st.color,flexShrink:0,
+                    }}>
+                      {ISSUE_STATUS.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}
+                    </select>
+                  </div>
+
+                  {a ? (
+                    <div style={{marginTop:12,background:C.bg3,borderRadius:10,padding:"12px 14px"}}>
+                      <div style={{fontSize:12.5,color:C.t,lineHeight:1.6,marginBottom:10}}>💬 {a.summary_ko}</div>
+                      <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
+                        {[
+                          {l:`시각자료 ${a.visual_feasibility}`, c: a.visual_feasibility==="상"?C.g:a.visual_feasibility==="중"?C.am:C.r},
+                          {l:`리스크 ${a.risk_level}`,          c: a.risk_level==="낮음"?C.g:a.risk_level==="중간"?C.am:C.r},
+                          {l:`신선도 ${a.freshness}`,           c:C.cy},
+                          {l:`공감도 ${a.global_fit}`,          c: a.global_fit==="상"?C.g:a.global_fit==="중"?C.am:C.r},
+                          {l: a.recommended ? "✅ 추천" : "⚠️ 비추천", c: a.recommended?C.g:C.r},
+                        ].map((b,bi)=>(
+                          <span key={bi} style={{
+                            fontSize:10,fontFamily:C.m,fontWeight:800,padding:"2px 8px",borderRadius:20,
+                            background:`${b.c}18`,border:`1px solid ${b.c}40`,color:b.c,
+                          }}>{b.l}</span>
+                        ))}
+                      </div>
+                      <div style={{fontSize:11.5,color:C.ts,lineHeight:1.6,marginBottom:4}}><strong style={{color:C.tm}}>각도:</strong> {a.angle}</div>
+                      <div style={{fontSize:11.5,color:C.ts,lineHeight:1.6}}><strong style={{color:C.tm}}>종합:</strong> {a.verdict}</div>
+                    </div>
+                  ) : null}
+
+                  <div style={{display:"flex",gap:6,marginTop:12}}>
+                    <button onClick={()=>assessIssue(item)} disabled={issueAnalyzing[item.id]} style={{
+                      flex:1,padding:"8px",borderRadius:9,fontSize:11,fontWeight:700,
+                      background:C.acd,border:`1px solid ${C.acb}`,color:C.ac2,
+                      opacity:issueAnalyzing[item.id]?.6:1,
+                    }}>{issueAnalyzing[item.id]?"분석 중...":a?"🔁 재분석":"🤖 1차 분석"}</button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // ---
   const BgmPanel = () => {
     const trendChips = filtered.slice(0, 10).map(i=>i.title).filter(Boolean);
@@ -1931,6 +2171,8 @@ export default function TrendRadar() {
               {id:"news_ent",    icon:"🎬", color:"#f472b6"},
               {id:"news_viral",  icon:"💥", color:"#f59e0b"},
               {id:"reddit_fun",  icon:"R",  color:"#ff4500"},
+              {id:"news_world",    icon:"📰", color:"#38bdf8"},
+              {id:"youtube_world", icon:"▶",  color:"#0ea5e9"},
               {id:"google_kr",   icon:"🇰🇷", color:C.g},
             ].map(src => {
               const st = fStatus[src.id];
@@ -2008,6 +2250,7 @@ export default function TrendRadar() {
               {actionTab==="youtube"  && <YoutubePanel/>}
               {actionTab==="cross"    && <CrossPanel/>}
               {actionTab==="pipeline" && <PipelinePanel/>}
+              {actionTab==="issues"   && <IssuesPanel/>}
               {actionTab==="bgm"      && <BgmPanel/>}
             </div>
           </main>

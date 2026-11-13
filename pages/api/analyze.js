@@ -6,7 +6,7 @@ export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
-  const { type, trend, video, videos, keyword, trendAnalysis, ytAnalysis, channel, style, apiKey, items } = req.body;
+  const { type, trend, video, videos, keyword, trendAnalysis, ytAnalysis, channel, style, apiKey, items, issue } = req.body;
   // 서버 환경변수(ANTHROPIC_API_KEY)가 설정돼 있으면 브라우저에 키를 저장해두지 않아도
   // 한글 요약 등 AI 기능이 바로 동작한다 — 브라우저 로컬 키가 지워져도 기능이 "조용히" 꺼지지 않도록.
   const key = apiKey || process.env.ANTHROPIC_API_KEY;
@@ -46,8 +46,28 @@ JSON만: {"style":"shortform","logline":"한줄","characters":[{"name":"서여�
 - 참고 정보가 없는 한글 키워드는 보유한 지식으로 가장 가능성 높은 맥락을 짧게 추정하고, 확신이 없으면 "~관련 화제"처럼 완곡하게 표현.
 ${list}
 JSON 배열만 응답 (다른 텍스트 없이): [{"id":"항목id","summary_ko":"한글 설명"}, ...] - id는 원본의 [ ] 안 값을 그대로 사용.`;
+  } else if (type === "assess_issue") {
+    // issue: {title, source, url, context?} — 세계 이슈 쇼츠 채널의 "제작 준비 파이프라인" 1차 분석.
+    // 기존 트렌드 score(=인기도)와는 완전히 다른 축: "이걸로 쇼츠를 만들 수 있는가"를 판단한다.
+    prompt = `아래는 전세계 이슈/뉴스를 다루는 쇼츠 채널의 소재 후보다.
+제목: "${issue.title}"
+소스: ${issue.source}${issue.context ? `\n참고 맥락: ${issue.context}` : ""}
+
+이 소재를 쇼츠로 제작할 가치가 있는지 1차 분석해줘. 평가 기준:
+1. summary_ko: 이 이슈가 무엇인지 한국어 1~2문장 요약(배경지식 없는 시청자도 이해 가능하게)
+2. angle: 쇼츠로 만든다면 어떤 각도/프레이밍이 좋을지(예: "사실 요약형", "미스터리형", "숫자로 보는 충격", "현지 반응형" 등) 한 줄
+3. visual_feasibility: "상"/"중"/"하" — 뉴스 영상·사진·지도·그래픽 등 시각자료를 구하기 쉬운 소재인지
+4. visual_note: 위 판단의 근거 한 줄
+5. risk_level: "낮음"/"중간"/"높음" — 민감도(인명피해·정치적 논란·저작권 민감 소재 등) 리스크
+6. risk_note: 위 판단의 근거 한 줄
+7. freshness: "급함"/"보통"/"느슨" — 지금 바로 다뤄야 하는지, 며칠 지나도 괜찮은지
+8. global_fit: "상"/"중"/"하" — 한국 시청자가 자막/번역만으로 바로 공감·이해할 수 있는 소재인지(현지 맥락 의존도가 낮을수록 높음)
+9. recommended: true/false — 종합적으로 제작을 추천하는지
+10. verdict: 종합 판단 한 줄(왜 추천/비추천하는지)
+
+JSON만 응답: {"summary_ko":"...","angle":"...","visual_feasibility":"상","visual_note":"...","risk_level":"낮음","risk_note":"...","freshness":"보통","global_fit":"상","recommended":true,"verdict":"..."}`;
   } else {
-    return res.status(400).json({ error: "type은 analyze, script, youtube_benchmark, cross_analysis, channel_analysis, drama_prompt 중 하나." });
+    return res.status(400).json({ error: "type은 analyze, script, youtube_benchmark, cross_analysis, channel_analysis, drama_prompt, translate_titles, assess_issue 중 하나." });
   }
   try {
     const response = await fetch(ANTHROPIC_URL, {
