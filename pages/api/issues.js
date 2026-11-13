@@ -72,7 +72,7 @@ export default async function handler(req, res) {
   }
 
   if (req.method === "PATCH") {
-    const { id, status, memo, analysis } = req.body || {};
+    const { id, status, memo, analysis, deep } = req.body || {};
     if (!id) return res.status(400).json({ error: "id required" });
     const list = readAll();
     const item = list.find(c => c.id === id);
@@ -80,6 +80,7 @@ export default async function handler(req, res) {
     if (status !== undefined) item.status = status;
     if (memo !== undefined) item.memo = memo;
     if (analysis !== undefined) item.analysis = analysis;
+    if (deep !== undefined) item.deep = deep; // 심층 분석(영상 실제 시청) 결과 — /api/deep-analyze
     writeAll(list);
     return res.status(200).json({ item });
   }

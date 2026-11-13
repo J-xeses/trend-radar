@@ -288,6 +288,9 @@ export default function TrendRadar() {
   const [issuesLoading, setIssuesLoading] = useState(false);
   const [issueFilter, setIssueFilter]     = useState("all"); // all|new|reviewing|adopted|produced|dropped
   const [issueAnalyzing, setIssueAnalyzing] = useState({}); // {id:true}
+  const [deepAnalyzing, setDeepAnalyzing] = useState({}); // {id:startedAtMs}
+  const [deepErrors, setDeepErrors] = useState({});       // {id:"메시지"}
+  const [deepOpen, setDeepOpen] = useState({});           // {id:true} 심층 분석 결과 펼침
   const [bgmMood, setBgmMood]         = useState("BGM_EMO");
   const [bgmKeywords, setBgmKeywords] = useState("");
   const [bgmResults, setBgmResults]   = useState([]);
@@ -950,6 +953,33 @@ export default function TrendRadar() {
       }
     } catch {}
     setIssueAnalyzing(s => { const n = { ...s }; delete n[issueItem.id]; return n; });
+  }, [apiKey]);
+
+  // 심층 분석 — 서버가 영상을 직접 받아 프레임·자막·댓글까지 보고 비트 단위 분석 + 재구성 플랜을 만든다(로컬 전용, 1~2분)
+  const deepAnalyzeIssue = useCallback(async (issueItem) => {
+    setDeepAnalyzing(s => ({ ...s, [issueItem.id]: Date.now() }));
+    setDeepErrors(s => { const n = { ...s }; delete n[issueItem.id]; return n; });
+    try {
+      const res = await fetch("/api/deep-analyze", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: issueItem.id, url: issueItem.url, title: issueItem.title, category: issueItem.extra?.category || "", apiKey }),
+      });
+      const d = await res.json().catch(() => ({ error: `응답 오류 (HTTP ${res.status})` }));
+      if (d.deep) {
+        const nextStatus = issueItem.status === "new" ? "reviewing" : issueItem.status;
+        setIssues(prev => prev.map(x => x.id===issueItem.id ? { ...x, deep: d.deep, status: nextStatus } : x));
+        setDeepOpen(s => ({ ...s, [issueItem.id]: true }));
+        fetch("/api/issues", {
+          method: "PATCH", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: issueItem.id, deep: d.deep, status: nextStatus })
+        }).catch(() => {});
+      } else {
+        setDeepErrors(s => ({ ...s, [issueItem.id]: (d.error || "심층 분석 실패") + (d.hint ? ` (${d.hint})` : "") }));
+      }
+    } catch (e) {
+      setDeepErrors(s => ({ ...s, [issueItem.id]: e.message || "심층 분석 실패" }));
+    }
+    setDeepAnalyzing(s => { const n = { ...s }; delete n[issueItem.id]; return n; });
   }, [apiKey]);
 
   // 파이프라인 카드의 "후보풀로 전송" 버튼 -- yeori-studio proxy.js를 거쳐
@@ -1969,6 +1999,80 @@ export default function TrendRadar() {
     { id:"produced",  label:"제작완료", color:C.ac2 },
     { id:"dropped",   label:"드랍",   color:C.tm },
   ];
+  // 심층 분석 결과 카드 (함수 호출로 렌더 — 훅 사용 금지)
+  const renderDeep = (item) => {
+    const d = item.deep || {};
+    const row = (label, val) => val ? (
+      <div style={{fontSize:11.5,color:C.ts,lineHeight:1.65,marginBottom:5}}><strong style={{color:C.tm}}>{label}</strong> {val}</div>
+    ) : null;
+    const sec = (title) => <div style={{fontSize:11,fontWeight:800,color:"#c084fc",margin:"14px 0 7px",fontFamily:C.m}}>{title}</div>;
+    const riskColor = d.copyright_risk?.level==="높음" ? C.r : d.copyright_risk?.level==="중간" ? C.am : C.g;
+    const hookFrames = (d.frames||[]).filter(f=>f.t<=3);
+    const restFrames = (d.frames||[]).filter(f=>f.t>3);
+    const frameImg = (f) => (
+      <div key={f.name} style={{flexShrink:0,textAlign:"center"}}>
+        <img src={`/api/deep-frame?id=${encodeURIComponent(item.id)}&f=${f.name}`} alt="" loading="lazy"
+          style={{height:120,borderRadius:6,border:`1px solid ${C.b}`,display:"block"}}/>
+        <div style={{fontSize:9.5,fontFamily:C.m,color:C.tm,marginTop:3}}>{f.t}s</div>
+      </div>
+    );
+    return (
+      <div style={{marginTop:12,background:"rgba(168,85,247,.06)",border:"1px solid rgba(168,85,247,.25)",borderRadius:10,padding:"12px 14px"}}>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",marginBottom:8}}>
+          <span style={{fontSize:12,fontWeight:800,color:"#c084fc"}}>🔬 심층 분석</span>
+          {d.score!=null && <span style={{fontSize:10,fontFamily:C.m,fontWeight:800,color:C.ac2}}>{d.score}/10</span>}
+          {d.difficulty && <span style={{fontSize:10,fontFamily:C.m,color:C.tm}}>제작 {d.difficulty}</span>}
+          {d.copyright_risk?.level && <span style={{fontSize:10,fontFamily:C.m,fontWeight:700,color:riskColor}}>저작권 위험 {d.copyright_risk.level}</span>}
+          <span style={{fontSize:9.5,fontFamily:C.m,color:C.tm,marginLeft:"auto"}}>
+            {d.meta?.duration ? `${d.meta.duration}초 · ` : ""}프레임 {(d.frames||[]).length} · {d.transcriptAvailable?"자막✓":"자막✗"} · 댓글 {d.commentCount||0} · {timeAgo(d.analyzedAt)}
+          </span>
+        </div>
+        {d.one_line && <div style={{fontSize:12.5,color:C.t,lineHeight:1.6,marginBottom:4}}>💬 {d.one_line}</div>}
+        {d.verdict && <div style={{fontSize:11.5,color:C.ts,lineHeight:1.6}}>→ {d.verdict}</div>}
+
+        {sec("⚡ 첫 3초 (후킹 해부)")}
+        {hookFrames.length>0 && <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:6,marginBottom:6}}>{hookFrames.map(frameImg)}</div>}
+        {row("첫 화면:", d.hook_breakdown?.first_frame)}
+        {row("첫 대사:", d.hook_breakdown?.first_line)}
+        {row("기법:", d.hook_breakdown?.technique)}
+        {row("왜 멈추나:", d.hook_breakdown?.why_works)}
+
+        {sec("🎞 타임라인")}
+        {restFrames.length>0 && <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:6,marginBottom:8}}>{restFrames.map(frameImg)}</div>}
+        {(d.timeline||[]).map((b,i)=>(
+          <div key={i} style={{display:"grid",gridTemplateColumns:"70px 52px 1fr",gap:8,fontSize:11,lineHeight:1.55,padding:"5px 0",borderTop:i?`1px solid ${C.b}`:"none"}}>
+            <span style={{fontFamily:C.m,color:C.tm}}>{b.t}</span>
+            <span style={{fontWeight:700,color:C.am}}>{b.role}</span>
+            <span style={{color:C.ts}}>{b.visual}{b.audio ? <span style={{color:C.tm}}> — “{b.audio}”</span> : null}</span>
+          </div>
+        ))}
+        {row("구조:", d.story_structure)}
+        {(d.retention_mechanics||[]).length>0 && row("시청 지속 장치:", d.retention_mechanics.join(" · "))}
+
+        {sec("💬 시청자 반응 (댓글)")}
+        {row("주된 반응:", d.audience_reaction?.main_feelings)}
+        {(d.audience_reaction?.questions||[]).length>0 && row("궁금해하는 것:", d.audience_reaction.questions.join(" / "))}
+        {row("논쟁:", d.audience_reaction?.debates)}
+        {(d.facts_to_verify||[]).length>0 && row("🔎 검증 필요:", d.facts_to_verify.join(" / "))}
+
+        {sec("🔁 재구성 제작 플랜")}
+        {(d.remix_plan?.titles||[]).length>0 && row("제목안:", d.remix_plan.titles.join("  |  "))}
+        {row("첫 3초 나레이션:", d.remix_plan?.hook_line)}
+        {(d.remix_plan?.beats||[]).map((b,i)=>(
+          <div key={i} style={{display:"grid",gridTemplateColumns:"48px 1fr 1fr 64px",gap:8,fontSize:11,lineHeight:1.55,padding:"5px 0",borderTop:i?`1px solid ${C.b}`:"none"}}>
+            <span style={{fontFamily:C.m,color:C.tm}}>{b.sec}s</span>
+            <span style={{color:C.t}}>{b.narration}</span>
+            <span style={{color:C.ts}}>{b.visual}</span>
+            <span style={{fontSize:10,fontFamily:C.m,color:b.source==="원본인용"?C.r:C.g}}>{b.source}</span>
+          </div>
+        ))}
+        {row("차별화:", d.remix_plan?.differentiation)}
+        {row("소스 확보:", d.visual_sourcing)}
+        {row("저작권:", d.copyright_risk?.note)}
+      </div>
+    );
+  };
+
   const IssuesPanel = () => {
     const visible = issueFilter==="all" ? issues : issues.filter(x=>x.status===issueFilter);
     return (
@@ -1986,7 +2090,8 @@ export default function TrendRadar() {
         </div>
         <div style={{fontSize:11.5,color:C.tm,lineHeight:1.7,marginBottom:14}}>
           "니치 바이럴 클립" 그룹(유튜브 쇼츠·Reddit, 이색테크·미스터리·장인·심리실험·틈새상식·팩트체크)에서
-          🎬 클립후보 버튼으로 등록 → "1차 분석"으로 3초 후킹·시청지속 비결·재구성 앵글을 뽑아보고 →
+          🎬 클립후보 버튼으로 등록 → "1차 분석"(제목 기반 빠른 판단)으로 걸러내고 →
+          괜찮은 후보는 "🔬 심층 분석"으로 영상을 실제로 받아 프레임·자막·댓글까지 보고 비트 단위 해부 + 재구성 제작 플랜을 뽑은 뒤 →
           상태를 바꿔가며 추적하세요. (로컬 실행 중에만 저장됩니다 — <code style={{color:C.ts}}>npm run dev</code>)
         </div>
         <div style={{display:"flex",gap:6,marginBottom:16,flexWrap:"wrap"}}>
@@ -2059,12 +2164,32 @@ export default function TrendRadar() {
                     </div>
                   ) : null}
 
+                  {item.deep && deepOpen[item.id] ? renderDeep(item) : null}
+                  {deepErrors[item.id] && (
+                    <div style={{marginTop:10,fontSize:11.5,color:C.r,background:C.rd,border:`1px solid ${C.rb}`,borderRadius:8,padding:"8px 10px"}}>
+                      🔬 {deepErrors[item.id]}
+                    </div>
+                  )}
+
                   <div style={{display:"flex",gap:6,marginTop:12}}>
                     <button onClick={()=>assessIssue(item)} disabled={issueAnalyzing[item.id]} style={{
                       flex:1,padding:"8px",borderRadius:9,fontSize:11,fontWeight:700,
                       background:C.acd,border:`1px solid ${C.acb}`,color:C.ac2,
                       opacity:issueAnalyzing[item.id]?.6:1,
                     }}>{issueAnalyzing[item.id]?"분석 중...":a?"🔁 재분석":"🤖 1차 분석"}</button>
+                    <button onClick={()=>deepAnalyzeIssue(item)} disabled={!!deepAnalyzing[item.id] || !item.url}
+                      title={item.url ? "영상을 직접 받아 프레임·자막·댓글까지 보고 분석 (1~2분, 로컬 실행 전용)" : "영상 링크가 없는 후보는 심층 분석할 수 없어요"}
+                      style={{
+                      flex:1,padding:"8px",borderRadius:9,fontSize:11,fontWeight:700,
+                      background:"rgba(168,85,247,.12)",border:"1px solid rgba(168,85,247,.4)",color:"#c084fc",
+                      opacity:(deepAnalyzing[item.id] || !item.url)?.55:1,
+                    }}>{deepAnalyzing[item.id] ? "🔬 영상 보는 중... (1~2분)" : item.deep ? "🔬 심층 재분석" : "🔬 심층 분석"}</button>
+                    {item.deep && (
+                      <button onClick={()=>setDeepOpen(s=>({ ...s, [item.id]: !s[item.id] }))} style={{
+                        padding:"8px 12px",borderRadius:9,fontSize:11,fontWeight:700,
+                        background:C.bg3,border:`1px solid ${C.b}`,color:C.ts,
+                      }}>{deepOpen[item.id] ? "접기 ▲" : "심층 결과 ▼"}</button>
+                    )}
                   </div>
                 </div>
               );
