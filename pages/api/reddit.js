@@ -3,7 +3,13 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
   try {
-    const subs = "artificial+MachineLearning+technology+programming";
+    const flavor = req.query.flavor || "tech";
+    const SUBS = {
+      tech: "artificial+MachineLearning+technology+programming",
+      // 흥미/화제 위주 — 교양·기술보다 SNS에서 바로 공감되는 소재
+      fun: "popculture+entertainment+interestingasfuck+todayilearned+nottheonion+Showerthoughts",
+    };
+    const subs = SUBS[flavor] || SUBS.tech;
     const r = await fetch(
       "https://www.reddit.com/r/" + subs + "/hot.json?limit=25",
       { headers: { "User-Agent": "TrendRadar/1.0" } }

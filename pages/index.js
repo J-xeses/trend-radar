@@ -41,8 +41,18 @@ const SRC_GROUPS = [
   { id:"all",    label:"전체",    icon:"🌐", color:C.ac,  sources:[] },
   { id:"video",  label:"영상",    icon:"📺", color:"#ff4444",
     sources:[
-      { id:"youtube_kr", label:"유튜브 급상승", icon:"▶", color:"#ff4444" },
-      { id:"youtube_ch", label:"유튜브 채널",   icon:"📺", color:"#ff6666" },
+      { id:"youtube_kr",  label:"유튜브 급상승",     icon:"▶", color:"#ff4444" },
+      { id:"youtube_ent", label:"유튜브 엔터 급상승", icon:"▶", color:"#ff8888" },
+      { id:"youtube_ch",  label:"유튜브 채널",       icon:"📺", color:"#ff6666" },
+    ]
+  },
+  { id:"buzz",   label:"화제·이슈", icon:"🔥", color:C.ro,
+    sources:[
+      { id:"signal_kr",   label:"실시간 검색어(커뮤니티)", icon:"🔎", color:C.ro },
+      { id:"signal_news", label:"실시간 톱기사",          icon:"📌", color:C.r  },
+      { id:"news_ent",    label:"연예 뉴스",              icon:"🎬", color:"#f472b6" },
+      { id:"news_viral",  label:"화제·밈 뉴스",           icon:"💥", color:"#f59e0b" },
+      { id:"reddit_fun",  label:"Reddit 흥미글",          icon:"R", color:"#ff4500" },
     ]
   },
   { id:"tech",   label:"테크",    icon:"💻", color:C.cy,
@@ -50,15 +60,15 @@ const SRC_GROUPS = [
       { id:"hackernews",  label:"HackerNews", icon:"Y", color:"#ff6600" },
       { id:"github",      label:"GitHub",     icon:"G", color:"#a78bfa" },
       { id:"producthunt", label:"ProductHunt",icon:"P", color:"#da552f" },
+      { id:"reddit_tech", label:"Reddit 테크", icon:"R", color:"#ff4500" },
     ]
   },
   { id:"news",   label:"뉴스",    icon:"📰", color:C.am,
     sources:[
-      { id:"naver_news", label:"네이버뉴스", icon:"N", color:"#03c75a" },
-      { id:"reddit",     label:"Reddit",     icon:"R", color:"#ff4500" },
+      { id:"naver_news", label:"네이버뉴스(키 필요)", icon:"N", color:"#03c75a" },
     ]
   },
-  { id:"trends", label:"트렌드",  icon:"📊", color:C.g,
+  { id:"trends", label:"실시간 검색 트렌드",  icon:"📊", color:C.g,
     sources:[
       { id:"google_kr",     label:"Google KR", icon:"🇰🇷", color:C.g  },
       { id:"google_us",     label:"Google US", icon:"🇺🇸", color:C.cy },
@@ -87,6 +97,18 @@ const PERIODS = [
 
 // ---
 const CATS = [
+  { id:"buzz",  e:"🔥", n:"화제·이슈",    color:"#f05252",
+    keywords:["화제","이슈","논란","충격","발칵","공개","폭로","근황","깜짝","반전","급상승","실검"],
+    subs:["실시간 이슈","커뮤니티 화제","논란·사건","공개·발표","밈·유머"] },
+  { id:"ent",   e:"🎬", n:"엔터·연예",    color:"#f472b6",
+    keywords:["브이로그","일상","예능","드라마","영화","음악","연예","아이돌","배우","가수","컴백","앨범"],
+    subs:["브이로그","예능·클립","드라마·영화","음악·아이돌","유머·밈","반려동물"] },
+  { id:"sport", e:"⚽", n:"스포츠·게임",  color:"#34d399",
+    keywords:["스포츠","게임","운동","헬스","축구","야구","e스포츠"],
+    subs:["축구","야구·농구","헬스·운동","게임","e스포츠","격투기"] },
+  { id:"life",  e:"🌍", n:"여행·라이프",  color:"#60a5fa",
+    keywords:["여행","맛집","뷰티","패션","라이프","요리","인테리어"],
+    subs:["해외여행","국내여행","맛집","뷰티·패션","인테리어","요리"] },
   { id:"ai",    e:"🤖", n:"AI·자기계발",  color:"#a78bfa",
     keywords:["AI","ChatGPT","GPT","Claude","Gemini","인공지능","자동화","생산성","자기계발","노션"],
     subs:["AI 툴 활용","업무 자동화","직장인 꿀팁","커리어·성장","자기계발","노션·툴","프롬프트"] },
@@ -99,15 +121,6 @@ const CATS = [
   { id:"edu",   e:"📚", n:"교육·지식",    color:"#10c98a",
     keywords:["교육","학습","지식","공부","역사","과학","상식","잡학"],
     subs:["생활상식","잡학지식","역사","과학","언어 공부","독서"] },
-  { id:"ent",   e:"🎬", n:"엔터·일상",    color:"#f472b6",
-    keywords:["브이로그","일상","예능","드라마","영화","음악","연예"],
-    subs:["브이로그","예능·클립","드라마·영화","음악","유머·밈","반려동물"] },
-  { id:"sport", e:"⚽", n:"스포츠·게임",  color:"#34d399",
-    keywords:["스포츠","게임","운동","헬스","축구","야구","e스포츠"],
-    subs:["축구","야구·농구","헬스·운동","게임","e스포츠","격투기"] },
-  { id:"life",  e:"🌍", n:"여행·라이프",  color:"#60a5fa",
-    keywords:["여행","맛집","뷰티","패션","라이프","요리","인테리어"],
-    subs:["해외여행","국내여행","맛집","뷰티·패션","인테리어","요리"] },
 ];
 
 // ---
@@ -296,6 +309,34 @@ export default function TrendRadar() {
           } catch(e) { st.youtube_kr = { ok:false, n:0, err:e.message }; }
         }).catch(e => { st.youtube_kr = { ok:false, n:0, err:e.message }; }),
 
+      // 1b. YouTube 엔터테인먼트 카테고리 급상승 (categoryId=24)
+      fetch(`/api/youtube?type=trending&region=${ytRegion}&category=24`)
+        .then(r => r.json())
+        .then(d => {
+          try {
+            const xml = new DOMParser().parseFromString(d.xml||"","text/xml");
+            const entries = Array.from(xml.querySelectorAll("entry"));
+            if (!entries.length) throw new Error("YouTube 엔터 RSS entries empty");
+            const parsed = entries.slice(0,25).map((e,i) => {
+              const linkEl = e.querySelector("link");
+              const href = linkEl?.getAttribute("href") || linkEl?.textContent || "";
+              return {
+                id:`ytent_${Date.now()}_${i}`, source:"youtube_ent",
+                title: e.querySelector("title")?.textContent||"",
+                url:   href,
+                score: Math.max(20, 90 - i*2.5),
+                time:  e.querySelector("published")?.textContent||"",
+                extra: {
+                  channel: e.querySelector("author name")?.textContent||"",
+                  views: e.querySelector("statistics")?.getAttribute("views")||"0",
+                }
+              };
+            });
+            all.push(...parsed);
+            st.youtube_ent = { ok:true, n:parsed.length };
+          } catch(e) { st.youtube_ent = { ok:false, n:0, err:e.message }; }
+        }).catch(e => { st.youtube_ent = { ok:false, n:0, err:e.message }; }),
+
       // 2. HackerNews top stories
       fetch("https://hacker-news.firebaseio.com/v0/topstories.json")
         .then(r => r.json())
@@ -319,13 +360,13 @@ export default function TrendRadar() {
           st.hackernews = { ok:true, n:parsed.length };
         }).catch(e => { st.hackernews = { ok:false, n:0, err:e.message }; }),
 
-      // 3. Reddit (server-side API)
-      fetch("/api/reddit")
+      // 3. Reddit — 테크 (server-side API)
+      fetch("/api/reddit?flavor=tech")
         .then(r=>r.json())
         .then(d => {
           const posts = d?.posts||[];
           const parsed = posts.map(p => ({
-            id:`rd_${p.id}`, source:"reddit",
+            id:`rd_${p.id}`, source:"reddit_tech",
             title: p.title,
             url:   p.url,
             score: p.score,
@@ -333,8 +374,25 @@ export default function TrendRadar() {
             extra: { upvotes:p.upvotes, comments:p.comments, sub:p.subreddit }
           }));
           all.push(...parsed);
-          st.reddit = { ok:true, n:parsed.length };
-        }).catch(e => { st.reddit = { ok:false, n:0, err:e.message }; }),
+          st.reddit_tech = { ok:true, n:parsed.length };
+        }).catch(e => { st.reddit_tech = { ok:false, n:0, err:e.message }; }),
+
+      // 3b. Reddit — 흥미/화제 (교양·기술보다 SNS에서 바로 공감되는 소재)
+      fetch("/api/reddit?flavor=fun")
+        .then(r=>r.json())
+        .then(d => {
+          const posts = d?.posts||[];
+          const parsed = posts.map(p => ({
+            id:`rdf_${p.id}`, source:"reddit_fun",
+            title: p.title,
+            url:   p.url,
+            score: p.score,
+            time:  p.time,
+            extra: { upvotes:p.upvotes, comments:p.comments, sub:p.subreddit }
+          }));
+          all.push(...parsed);
+          st.reddit_fun = { ok:true, n:parsed.length };
+        }).catch(e => { st.reddit_fun = { ok:false, n:0, err:e.message }; }),
 
       // 4. GitHub trending repos
       fetch("https://api.github.com/search/repositories?q=pushed:>2025-06-01+stars:>50&sort=updated&order=desc&per_page=20", {
@@ -373,6 +431,102 @@ export default function TrendRadar() {
           st.producthunt = { ok:true, n:parsed.length };
         }).catch(e => { st.producthunt = { ok:false, n:0, err:e.message }; }),
 
+      // 6. 시그널(signal.bz) — 국내 커뮤니티/포털 실시간 검색어 + 톱기사 (네이버 실검 폐지 이후 대체 소스)
+      fetch("/api/signal")
+        .then(r=>r.json())
+        .then(d => {
+          const kwParsed = (d?.keywords||[]).map(k => ({
+            id:`sigkw_${k.rank}_${d.fetchedAt||Date.now()}`, source:"signal_kr",
+            title: k.keyword,
+            url:   `https://search.naver.com/search.naver?query=${encodeURIComponent(k.keyword)}`,
+            score: Math.max(20, 100 - (k.rank-1)*8),
+            time:  new Date(d.fetchedAt||Date.now()).toISOString(),
+            extra: { rank:k.rank, state:k.state },
+          }));
+          const artParsed = (d?.articles||[]).map((a,i) => ({
+            id: a.id, source:"signal_news",
+            title: a.title,
+            url:   a.url,
+            score: Math.max(20, 95 - i*5),
+            time:  new Date(d.fetchedAt||Date.now()).toISOString(),
+            extra: { desc:a.desc },
+          }));
+          all.push(...kwParsed, ...artParsed);
+          st.signal_kr   = { ok:true, n:kwParsed.length };
+          st.signal_news = { ok:true, n:artParsed.length };
+          // 톱기사는 desc에 이미 맥락이 있어 AI 호출 없이 바로 "한 줄 설명"으로 재사용
+          const preseed = {};
+          artParsed.forEach(a => { if (a.extra.desc) preseed[a.id] = a.extra.desc.slice(0,70); });
+          if (Object.keys(preseed).length) setTranslations(prev => ({ ...preseed, ...prev }));
+        }).catch(e => { st.signal_kr = { ok:false, n:0, err:e.message }; st.signal_news = { ok:false, n:0, err:e.message }; }),
+
+      // 7. Google 뉴스 — 연예
+      fetch("/api/googlenews?topic=entertainment")
+        .then(r=>r.json())
+        .then(d => {
+          const parsed = (d?.items||[]).map((it,i) => ({
+            id:`gne_${i}_${Date.now()}`, source:"news_ent",
+            title: it.title,
+            url:   it.url,
+            score: Math.max(25, 85 - i*3),
+            time:  it.pubDate ? new Date(it.pubDate).toISOString() : new Date().toISOString(),
+            extra: { press: it.source },
+          }));
+          all.push(...parsed);
+          st.news_ent = { ok:true, n:parsed.length };
+        }).catch(e => { st.news_ent = { ok:false, n:0, err:e.message }; }),
+
+      // 8. Google 뉴스 — 화제·밈·논란
+      fetch("/api/googlenews?topic=viral")
+        .then(r=>r.json())
+        .then(d => {
+          const parsed = (d?.items||[]).map((it,i) => ({
+            id:`gnv_${i}_${Date.now()}`, source:"news_viral",
+            title: it.title,
+            url:   it.url,
+            score: Math.max(25, 88 - i*3),
+            time:  it.pubDate ? new Date(it.pubDate).toISOString() : new Date().toISOString(),
+            extra: { press: it.source },
+          }));
+          all.push(...parsed);
+          st.news_viral = { ok:true, n:parsed.length };
+        }).catch(e => { st.news_viral = { ok:false, n:0, err:e.message }; }),
+
+      // 9. Google Trends 실시간 검색어 — KR / US / 글로벌(GB+JP 병합)
+      ...["KR","US","GB,JP"].map((geo, gi) => {
+        const srcId = gi===0 ? "google_kr" : gi===1 ? "google_us" : "google_global";
+        return fetch(`/api/googletrends?geo=${encodeURIComponent(geo)}`)
+          .then(r=>r.json())
+          .then(d => {
+            const parsed = (d?.items||[]).map((it,i) => ({
+              id:`${srcId}_${i}_${Date.now()}`, source:srcId,
+              title: it.title,
+              url:   it.newsUrl || "https://trends.google.com/trending?geo=" + geo.split(",")[0],
+              score: Math.max(20, 90 - i*4),
+              time:  it.pubDate ? new Date(it.pubDate).toISOString() : new Date().toISOString(),
+              extra: { traffic: it.traffic, newsTitle: it.newsTitle },
+            }));
+            all.push(...parsed);
+            st[srcId] = { ok:true, n:parsed.length };
+          }).catch(e => { st[srcId] = { ok:false, n:0, err:e.message }; });
+      }),
+
+      // 10. 네이버 뉴스 (선택: NAVER_CLIENT_ID/SECRET 설정 시에만 데이터 채워짐)
+      fetch("/api/naver?q=" + encodeURIComponent("연예 화제"))
+        .then(r=>r.json())
+        .then(d => {
+          const parsed = (d?.items||[]).map((it,i) => ({
+            id:`nv_${i}_${Date.now()}`, source:"naver_news",
+            title: it.title,
+            url:   it.url,
+            score: Math.max(25, 80 - i*3),
+            time:  it.pubDate ? new Date(it.pubDate).toISOString() : new Date().toISOString(),
+            extra: { desc: it.desc },
+          }));
+          all.push(...parsed);
+          st.naver_news = d.error && !parsed.length ? { ok:false, n:0, err:d.error } : { ok:true, n:parsed.length };
+        }).catch(e => { st.naver_news = { ok:false, n:0, err:e.message }; }),
+
     ]);
 
     setItems(all);
@@ -389,15 +543,23 @@ export default function TrendRadar() {
     const alpha = (title.match(/[A-Za-z]/g) || []).length;
     return alpha > 5 && korean < 2;
   };
+  // 맥락 없이는 이해하기 어려운 항목 — 외국어 제목이거나, 국내 실시간 검색어처럼
+  // 짧고 단서가 없는 한글 키워드. 둘 다 "한글 요약 주석"이 필요하다.
+  const CRYPTIC_SOURCES = ["signal_kr", "google_kr", "google_global"];
+  const needsAnnotation = (item) => isEnglishTitle(item.title) || CRYPTIC_SOURCES.includes(item.source);
 
-  // 영어 제목 항목 일괄 번역 (items 갱신 시)
+  // 번역/요약 대상 항목 일괄 처리 (items 갱신 시) — 서버에 ANTHROPIC_API_KEY가 설정돼 있으면
+  // 브라우저에 키를 따로 저장하지 않아도 동작한다(apiKey는 있으면 우선 사용, 없으면 서버 키로 폴백).
   useEffect(() => {
-    if (!apiKey || items.length === 0) return;
-    const targets = items.filter(it => isEnglishTitle(it.title) && !translations[it.id]);
+    if (items.length === 0) return;
+    const targets = items.filter(it => needsAnnotation(it) && !translations[it.id]);
     if (targets.length === 0) return;
 
     setTranslating(true);
-    const batch = targets.slice(0, 40).map(it => ({ id: it.id, title: it.title }));
+    const batch = targets.slice(0, 40).map(it => ({
+      id: it.id, title: it.title,
+      context: it.extra?.newsTitle || undefined,
+    }));
 
     fetch("/api/analyze", {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -1034,7 +1196,7 @@ export default function TrendRadar() {
                   <span>{translations[item.id]}</span>
                 </div>
               )}
-              {!translations[item.id] && translating && isEnglishTitle(item.title) && (
+              {!translations[item.id] && translating && needsAnnotation(item) && (
                 <div style={{
                   fontSize:11,color:C.tm,marginBottom:12,
                   display:"flex",alignItems:"center",gap:5,
@@ -1707,7 +1869,7 @@ export default function TrendRadar() {
   return (
     <>
       <Head>
-        <title>TREND RADAR v7</title>
+        <title>TREND RADAR v8</title>
         <meta name="viewport" content="width=device-width,initial-scale=1"/>
       </Head>
       <style dangerouslySetInnerHTML={{ __html: css }} />
@@ -1737,7 +1899,7 @@ export default function TrendRadar() {
               fontSize:9,fontFamily:C.m,fontWeight:700,
               padding:"2px 7px",borderRadius:20,
               background:C.acd,color:C.ac2,border:`1px solid ${C.acb}`,
-            }}>v7</span>
+            }}>v8</span>
             <span style={{
               display:"flex",alignItems:"center",gap:5,
               fontSize:9,fontFamily:C.m,fontWeight:700,
@@ -1760,13 +1922,16 @@ export default function TrendRadar() {
             <span>총 <strong style={{color:C.t}}>{items.length}</strong>개</span>
             {totalFire>0&&<span style={{color:C.r}}>🔥 <strong>{totalFire}</strong></span>}
             {totalRise>0&&<span style={{color:C.am}}>📈 <strong>{totalRise}</strong></span>}
-            {/* source status badges */}
+            {/* source status badges — 화제·이슈 소스를 우선 노출, 나머지는 사이드바에서 확인 */}
             {[
-              {id:"youtube_kr", icon:"▶", color:"#ff4444"},
-              {id:"hackernews", icon:"Y",  color:"#ff6600"},
-              {id:"reddit",     icon:"R",  color:"#ff4500"},
-              {id:"github",     icon:"G",  color:"#a78bfa"},
-              {id:"producthunt",icon:"P",  color:"#da552f"},
+              {id:"youtube_kr",  icon:"▶",  color:"#ff4444"},
+              {id:"youtube_ent", icon:"▶",  color:"#ff8888"},
+              {id:"signal_kr",   icon:"🔎", color:C.ro},
+              {id:"signal_news", icon:"📌", color:C.r},
+              {id:"news_ent",    icon:"🎬", color:"#f472b6"},
+              {id:"news_viral",  icon:"💥", color:"#f59e0b"},
+              {id:"reddit_fun",  icon:"R",  color:"#ff4500"},
+              {id:"google_kr",   icon:"🇰🇷", color:C.g},
             ].map(src => {
               const st = fStatus[src.id];
               return (
@@ -1782,6 +1947,20 @@ export default function TrendRadar() {
                 </span>
               );
             })}
+            {/* 한글 요약 주석 기능 상태 — 조용히 꺼져있던 걸 다시 눈에 보이게 */}
+            {Object.keys(translations).length > 0 ? (
+              <span title="한글 요약 주석이 달린 항목 수" style={{
+                fontSize:9, fontFamily:C.m, fontWeight:800,
+                padding:"2px 6px", borderRadius:12,
+                background:C.acd, color:C.ac2, border:`1px solid ${C.acb}`,
+              }}>💬 {Object.keys(translations).length}</span>
+            ) : items.length > 0 && !translating && (
+              <span title="Claude API 키가 없어 한글 요약 주석이 비활성 상태입니다. 상단 'API 키 설정'을 누르거나, 서버에 ANTHROPIC_API_KEY를 설정하세요." style={{
+                fontSize:9, fontFamily:C.m, fontWeight:700,
+                padding:"2px 6px", borderRadius:12,
+                background:"rgba(255,255,255,.06)", color:C.tb,
+              }}>💬 비활성</span>
+            )}
           </div>
 
           
@@ -1851,8 +2030,9 @@ export default function TrendRadar() {
           }}>
             <div style={{fontSize:17,fontWeight:800,marginBottom:8}}>🔑 Claude API 키</div>
             <div style={{fontSize:13,color:C.tm,marginBottom:18,lineHeight:1.7}}>
-              AI 분석 기능에 사용됩니다.<br/>
-              키는 브라우저 로컬에만 저장됩니다.
+              AI 분석·한글 요약 주석 기능에 사용됩니다.<br/>
+              키는 브라우저 로컬에만 저장됩니다.<br/>
+              <span style={{color:C.tb}}>※ 서버에 ANTHROPIC_API_KEY를 설정해두면 이 키 없이도 한글 요약 주석은 자동으로 동작합니다.</span>
             </div>
             <input
               type="password" id="apiKeyInput"

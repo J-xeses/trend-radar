@@ -1,13 +1,16 @@
 // pages/api/analyze.js
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
-const MODEL = "claude-haiku-4-5-20251001";
+const MODEL = "claude-fable-5-2";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
   const { type, trend, video, videos, keyword, trendAnalysis, ytAnalysis, channel, style, apiKey, items } = req.body;
-  if (!apiKey) {
+  // 서버 환경변수(ANTHROPIC_API_KEY)가 설정돼 있으면 브라우저에 키를 저장해두지 않아도
+  // 한글 요약 등 AI 기능이 바로 동작한다 — 브라우저 로컬 키가 지워져도 기능이 "조용히" 꺼지지 않도록.
+  const key = apiKey || process.env.ANTHROPIC_API_KEY;
+  if (!key) {
     return res.status(400).json({ error: "API Key가 필요합니다." });
   }
   let prompt = "";
@@ -33,18 +36,23 @@ JSON만: {"channel_type":"유형","strengths":["강점1","강점2","강점3"],"w
     prompt = `영상 "${video.title}" AI 버추얼 인플루언서 씬별 대본+프롬프트. 스타일: ${styleMap[style||"shortform"]||styleMap.shortform}
 JSON만: {"style":"shortform","logline":"한줄","characters":[{"name":"서여리","age":"20대","personality":"성격","image_prompt":"Cinematic portrait, Korean woman 20s, neutral expression, 8K, photorealistic"}],"storyline":"스토리","bgm_mood":"BGM","cuts":[{"cut":1,"scene":"씬","dialogue":"대사","is_narration":false,"image_prompt":"Cinematic [shot], [setting]. Bright warm Korean lifestyle, film grain, --ar 16:9","video_prompt":"[Motion]. Strictly NO background music. Clean voices only."},{"cut":2,"scene":"씬2","dialogue":"대사2","is_narration":true,"image_prompt":"Cinematic close-up, [setting]. --ar 16:9","video_prompt":"[Motion]. Strictly NO background music."}],"core_message":"메시지","editing_guide":{"vrew":"Vrew 가이드","capcut":"CapCut 가이드","subtitle_style":"자막"}}`;
   } else if (type === "translate_titles") {
-    // items: [{id, title}], 영어 제목 -> 한글 핵심 요약 일괄 번역
-    const list = (items||[]).map((it,i)=>`${i+1}. [${it.id}] ${it.title}`).join("\n");
-    prompt = `다음은 해외 기술/AI 트렌드 영상·게시물 제목 목록이다. 한국 직장인(20-40대) 시청자가 한눈에 내용을 파악할 수 있도록, 각 제목을 자연스러운 한국어 한 줄 요약(20자 내외, 핵심 키워드 포함, 번역체 지양)으로 변환해줘.
+    // items: [{id, title, context?}]
+    // - 영어/외국어 제목 -> 한글 핵심 요약 번역
+    // - 국내 커뮤니티 실시간 검색어처럼 맥락 없는 한글 키워드 -> "왜 화제인지" 한줄 설명 (context가 있으면 참고)
+    const list = (items||[]).map((it,i)=>`${i+1}. [${it.id}] ${it.title}${it.context ? ` (참고: ${it.context})` : ""}`).join("\n");
+    prompt = `다음은 트렌드 대시보드에 올라온 제목/키워드 목록이다. 해외 기술·엔터 콘텐츠의 영어 제목도 있고, 국내 커뮤니티 실시간 화제 검색어(맥락 없이 짧은 한글 키워드)도 섞여 있다.
+한국 시청자가 한눈에 "이게 왜 화제인지" 파악할 수 있도록, 각 항목을 자연스러운 한국어 한 줄 설명(20~30자 내외, 핵심 키워드 포함, 번역체·추측 단정 지양)으로 바꿔줘.
+- 영어 제목은 자연스러운 한국어로 요약 번역.
+- 참고 정보가 없는 한글 키워드는 보유한 지식으로 가장 가능성 높은 맥락을 짧게 추정하고, 확신이 없으면 "~관련 화제"처럼 완곡하게 표현.
 ${list}
-JSON 배열만 응답 (다른 텍스트 없이): [{"id":"항목id","summary_ko":"한글 요약"}, ...] - id는 원본의 [ ] 안 값을 그대로 사용.`;
+JSON 배열만 응답 (다른 텍스트 없이): [{"id":"항목id","summary_ko":"한글 설명"}, ...] - id는 원본의 [ ] 안 값을 그대로 사용.`;
   } else {
     return res.status(400).json({ error: "type은 analyze, script, youtube_benchmark, cross_analysis, channel_analysis, drama_prompt 중 하나." });
   }
   try {
     const response = await fetch(ANTHROPIC_URL, {
       method: "POST",
-      headers: {"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01"},
+      headers: {"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01"},
       body: JSON.stringify({model:MODEL, max_tokens: type==="translate_titles" ? 4000 : 1500, messages:[{role:"user",content:prompt}]}),
     });
     if (!response.ok) {

@@ -5,7 +5,7 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
 
-  const { type, ids, region, q } = req.query;
+  const { type, ids, region, q, category } = req.query;
   const YT_KEY = process.env.YOUTUBE_API_KEY;
   const regionCode = region || "KR";
 
@@ -13,7 +13,8 @@ export default async function handler(req, res) {
     // trending: mostPopular chart
     if (type === "trending") {
       if (!YT_KEY) return res.status(200).json({ xml: "", error: "YOUTUBE_API_KEY not set" });
-      const url = "https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&chart=mostPopular&regionCode=" + regionCode + "&hl=ko_KR&maxResults=25&key=" + YT_KEY;
+      const categoryParam = category ? "&videoCategoryId=" + encodeURIComponent(category) : "";
+      const url = "https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&chart=mostPopular&regionCode=" + regionCode + categoryParam + "&hl=ko_KR&maxResults=25&key=" + YT_KEY;
       const r = await fetch(url);
       if (!r.ok) { const e = await r.json(); throw new Error(e?.error?.message || "YouTube API error: " + r.status); }
       const data = await r.json();
