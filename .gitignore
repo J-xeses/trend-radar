@@ -26,3 +26,4 @@ Thumbs.db
 
 # 이슈 후보 파이프라인 로컬 저장소 (data/issues.js) — 로컬 전용, 커밋하지 않음
 data/
+.env*

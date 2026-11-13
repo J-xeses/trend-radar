@@ -252,6 +252,8 @@ function SearchBox({keyword, setKeyword}) {
 export default function TrendRadar() {
   //
   const sidebarRef = useRef(null);
+  const srcListRef = useRef(null); // "콘텐츠 유형"(SRC_GROUPS) 자체 스크롤 영역 — 그룹이 많아지고 하위소스가 펼쳐져도 카테고리 영역을 밀어내지 않도록
+  const catsListRef = useRef(null); // "카테고리"(CATS) 스크롤 영역
   const [items, setItems]       = useState([]);
   const [loading, setLoading]   = useState(false);
   const [fStatus, setFStatus]   = useState({});
@@ -1043,6 +1045,7 @@ export default function TrendRadar() {
 
       
       <div className="sec-lbl">📺 콘텐츠 유형<div className="sec-lbl-bar"/></div>
+      <div ref={srcListRef} style={{maxHeight:260, overflowY:"auto", paddingRight:3, marginBottom:4}}>
       {SRC_GROUPS.map(grp=>{
         const n = grp.id==="all"
           ? items.length
@@ -1056,12 +1059,10 @@ export default function TrendRadar() {
                 setSrcGroup(grp.id); setSrcDetail(null);
                 if (grp.sources.length) {
                   const isOpen = openSrc[grp.id];
-                  const aside = sidebarRef.current;
-                  const savedScroll = aside ? aside.scrollTop : 0;
+                  const list = srcListRef.current;
+                  const savedScroll = list ? list.scrollTop : 0;
                   setOpenSrc({[grp.id]: !isOpen});
-                  setTimeout(()=>{ if(aside) aside.scrollTop = savedScroll; }, 0);
-                  requestAnimationFrame(()=>{ if(aside) aside.scrollTop = scrollTop;
-                  });
+                  setTimeout(()=>{ if(list) list.scrollTop = savedScroll; }, 0);
                 }
               }}
               style={{
@@ -1111,11 +1112,12 @@ export default function TrendRadar() {
           </div>
         );
       })}
+      </div>
 
     </div>{/* /fixed top */}
 
     {/* scrollable - category, heat, sort */}
-    <div style={{flex:1, overflowY:"auto", padding:"0 12px 24px"}}>
+    <div ref={catsListRef} style={{flex:1, overflowY:"auto", padding:"0 12px 24px"}}>
       
       <div className="sec-lbl">📁 카테고리<div className="sec-lbl-bar"/></div>
       
@@ -1135,8 +1137,8 @@ export default function TrendRadar() {
             <div className={`cat-main${isOn?" on":""}`}
               onClick={()=>{
                 const isCurrentlyOpen = openCats[cat.id];
-                // 스크롤 고정: scrollable div 기준
-                const scrollable = sidebarRef.current?.querySelector('[style*="overflow-y: auto"], [style*="overflowY"]');
+                // 스크롤 고정: 카테고리 스크롤 영역 기준(ref로 직접 지정 — querySelector는 콘텐츠 유형 쪽 스크롤 영역과 혼동될 수 있음)
+                const scrollable = catsListRef.current;
                 const savedScroll = scrollable ? scrollable.scrollTop : 0;
                 setOpenCats({[cat.id]: !isCurrentlyOpen});
                 setCatId(cat.id);
