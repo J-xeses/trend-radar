@@ -498,7 +498,7 @@ export default function TrendRadar() {
           st.signal_news = { ok:true, n:artParsed.length };
           // 톱기사는 desc에 이미 맥락이 있어 AI 호출 없이 바로 "한 줄 설명"으로 재사용
           const preseed = {};
-          artParsed.forEach(a => { if (a.extra.desc) preseed[a.id] = a.extra.desc.slice(0,70); });
+          artParsed.forEach(a => { if (a.extra.desc) preseed[a.title] = a.extra.desc.slice(0,70); });
           if (Object.keys(preseed).length) setTranslations(prev => ({ ...preseed, ...prev }));
         }).catch(e => { st.signal_kr = { ok:false, n:0, err:e.message }; st.signal_news = { ok:false, n:0, err:e.message }; }),
 
@@ -637,30 +637,55 @@ export default function TrendRadar() {
 
   // 번역/요약 대상 항목 일괄 처리 (items 갱신 시) — 서버에 ANTHROPIC_API_KEY가 설정돼 있으면
   // 브라우저에 키를 따로 저장하지 않아도 동작한다(apiKey는 있으면 우선 사용, 없으면 서버 키로 폴백).
+  // 요약은 "제목" 기준으로 저장한다 — 항목 id는 수집할 때마다 바뀌어서 id로 저장하면 새로고침마다
+  // 같은 제목을 다시 번역(비용 낭비)했음. 브라우저에도 보관해 재방문 시 재번역하지 않는다.
+  const TR_CACHE_KEY = "tr_title_summaries_v1";
+  useEffect(() => {
+    try {
+      const cached = JSON.parse(localStorage.getItem(TR_CACHE_KEY) || "{}");
+      if (cached && typeof cached === "object") setTranslations(prev => ({ ...cached, ...prev }));
+    } catch {}
+  }, []);
+  useEffect(() => {
+    try {
+      const entries = Object.entries(translations).slice(-1500); // 오래된 것부터 버려 용량 제한
+      localStorage.setItem(TR_CACHE_KEY, JSON.stringify(Object.fromEntries(entries)));
+    } catch {}
+  }, [translations]);
+
   useEffect(() => {
     if (items.length === 0) return;
-    const targets = items.filter(it => needsAnnotation(it) && !translations[it.id]);
+    const seen = new Set();
+    const targets = items.filter(it => {
+      if (!needsAnnotation(it) || translations[it.title] || seen.has(it.title)) return false;
+      seen.add(it.title);
+      return true;
+    });
     if (targets.length === 0) return;
 
-    setTranslating(true);
-    const batch = targets.slice(0, 40).map(it => ({
-      id: it.id, title: it.title,
-      context: it.extra?.newsTitle || undefined,
-    }));
-
-    fetch("/api/analyze", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "translate_titles", items: batch, apiKey })
-    })
-      .then(r => r.json())
-      .then(d => {
-        const result = d.result || [];
-        const map = {};
-        result.forEach(r => { if (r.id && r.summary_ko) map[r.id] = r.summary_ko; });
-        setTranslations(prev => ({ ...prev, ...map }));
-      })
-      .catch(() => {})
-      .finally(() => setTranslating(false));
+    let cancelled = false;
+    (async () => {
+      setTranslating(true);
+      // 예전엔 앞 40개만 보내고 끝나서 나머지는 영영 요약이 안 붙었음 → 30개씩 끝까지 순차 처리
+      for (let i = 0; i < targets.length && !cancelled; i += 30) {
+        const chunk = targets.slice(i, i + 30);
+        const batch = chunk.map((it, k) => ({ id: `t${i + k}`, title: it.title, context: it.extra?.newsTitle || undefined }));
+        try {
+          const r = await fetch("/api/analyze", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ type: "translate_titles", items: batch, apiKey })
+          });
+          const d = await r.json();
+          if (!r.ok) break; // 키 없음/오류면 더 보내지 않음
+          const byId = Object.fromEntries(batch.map(b => [b.id, b.title]));
+          const map = {};
+          (d.result || []).forEach(x => { if (byId[x.id] && x.summary_ko) map[byId[x.id]] = x.summary_ko; });
+          if (!cancelled) setTranslations(prev => ({ ...prev, ...map }));
+        } catch { break; }
+      }
+      if (!cancelled) setTranslating(false);
+    })();
+    return () => { cancelled = true; setTranslating(false); };
   }, [items, apiKey]);
 
   // ---
@@ -1344,20 +1369,20 @@ export default function TrendRadar() {
               
               <div style={{
                 fontSize:15,fontWeight:700,lineHeight:1.55,
-                color:C.t,marginBottom:translations[item.id]?4:12,letterSpacing:"-.02em",
+                color:C.t,marginBottom:translations[item.title]?4:12,letterSpacing:"-.02em",
               }}>{item.title}</div>
 
-              {translations[item.id] && (
+              {translations[item.title] && (
                 <div style={{
                   fontSize:12.5,fontWeight:500,lineHeight:1.5,
                   color:C.ac2,marginBottom:12,
                   display:"flex",alignItems:"flex-start",gap:5,
                 }}>
                   <span style={{flexShrink:0,opacity:.7}}>💬</span>
-                  <span>{translations[item.id]}</span>
+                  <span>{translations[item.title]}</span>
                 </div>
               )}
-              {!translations[item.id] && translating && needsAnnotation(item) && (
+              {!translations[item.title] && translating && needsAnnotation(item) && (
                 <div style={{
                   fontSize:11,color:C.tm,marginBottom:12,
                   display:"flex",alignItems:"center",gap:5,
@@ -2272,23 +2297,25 @@ export default function TrendRadar() {
 
         
         <div style={{display:"flex",overflow:"hidden"}}>
-          <Sidebar/>
+          {/* 함수 호출로 렌더 — <Sidebar/>처럼 쓰면 부모 렌더마다 새 컴포넌트 타입이 돼서 통째로 재마운트되고
+              스크롤 위치가 맨 위로 초기화된다(클릭할 때마다 목록이 튀던 원인). 이 함수들 안에서는 훅을 쓰지 말 것. */}
+          {Sidebar()}
           <main style={{
             flex:1,overflowY:"auto",minWidth:0,
             height:"calc(100vh - 56px)",
             display:"flex",flexDirection:"column",
           }}>
-            
-            <ActionBar/>
-            
+
+            {ActionBar()}
+
             <div style={{flex:1,overflowY:"auto"}}>
-              {actionTab==="list"     && <ListPanel/>}
-              {actionTab==="analyze"  && <AnalyzePanel/>}
-              {actionTab==="youtube"  && <YoutubePanel/>}
-              {actionTab==="cross"    && <CrossPanel/>}
-              {actionTab==="pipeline" && <PipelinePanel/>}
-              {actionTab==="issues"   && <IssuesPanel/>}
-              {actionTab==="bgm"      && <BgmPanel/>}
+              {actionTab==="list"     && ListPanel()}
+              {actionTab==="analyze"  && AnalyzePanel()}
+              {actionTab==="youtube"  && YoutubePanel()}
+              {actionTab==="cross"    && CrossPanel()}
+              {actionTab==="pipeline" && PipelinePanel()}
+              {actionTab==="issues"   && IssuesPanel()}
+              {actionTab==="bgm"      && BgmPanel()}
             </div>
           </main>
         </div>
