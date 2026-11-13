@@ -75,13 +75,42 @@ const SRC_GROUPS = [
       { id:"google_global", label:"글로벌",     icon:"🌍", color:C.ac },
     ]
   },
-  { id:"world",  label:"월드 이슈", icon:"🌍", color:"#38bdf8",
+  { id:"niche",  label:"니치 바이럴 클립", icon:"🧩", color:"#38bdf8",
     sources:[
-      { id:"news_world",    label:"Google 뉴스 월드",   icon:"📰", color:"#38bdf8" },
-      { id:"youtube_world", label:"유튜브 글로벌 급상승", icon:"▶", color:"#0ea5e9" },
+      { id:"niche_techinvent", label:"이색 테크·발명",   icon:"🔧", color:"#38bdf8" },
+      { id:"niche_mystery",    label:"미스터리·미제사건", icon:"🕵️", color:"#818cf8" },
+      { id:"niche_craft",      label:"해외 바이럴·장인", icon:"🛠️", color:"#fbbf24" },
+      { id:"niche_psych",      label:"심리·행동실험",    icon:"🧠", color:"#f472b6" },
+      { id:"niche_trivia",     label:"틈새 상식·역발상", icon:"💡", color:"#34d399" },
+      { id:"niche_factcheck",  label:"팩트체크·탐사",    icon:"🔍", color:"#60a5fa" },
     ]
   },
 ];
+
+// 니치 바이럴 클립 큐레이션 — 카테고리별 유튜브 검색 키워드(영어, 글로벌 소스 타게팅) +
+// 리딧 서브레딧 매핑(서브레딧 이름으로 들어온 글을 어느 카테고리로 분류할지)
+const NICHE_CATEGORIES = [
+  { id:"niche_techinvent", label:"이색 테크·발명",
+    ytQuery: "weird invention OR clever gadget OR genius invention shorts",
+    subs: ["gadgets","DIY"] },
+  { id:"niche_mystery", label:"미스터리·미제사건",
+    ytQuery: "unsolved mystery OR mystery explained OR strange disappearance shorts",
+    subs: ["UnresolvedMysteries","creepy"] },
+  { id:"niche_craft", label:"해외 바이럴·장인",
+    ytQuery: "satisfying craftsmanship OR amazing skill viral OR traditional craftsman shorts",
+    subs: ["oddlysatisfying","educationalgifs","BeAmazed"] },
+  { id:"niche_psych", label:"심리·행동실험",
+    ytQuery: "psychology experiment OR social experiment reveals OR human behavior experiment shorts",
+    subs: ["psychology","AskScienceDiscussion"] },
+  { id:"niche_trivia", label:"틈새 상식·역발상",
+    ytQuery: "mind blowing fact OR did you know fact OR counterintuitive fact shorts",
+    subs: ["todayilearned","Showerthoughts","interestingasfuck"] },
+  { id:"niche_factcheck", label:"팩트체크·탐사",
+    ytQuery: "debunked myth OR truth behind OR investigation reveals truth shorts",
+    subs: ["nottheonion","explainlikeimfive"] },
+];
+const SUB_TO_NICHE = {};
+NICHE_CATEGORIES.forEach(c => c.subs.forEach(s => { SUB_TO_NICHE[s.toLowerCase()] = c.id; }));
 
 // ---
 const REGIONS = [
@@ -538,51 +567,50 @@ export default function TrendRadar() {
           st.naver_news = d.error && !parsed.length ? { ok:false, n:0, err:d.error } : { ok:true, n:parsed.length };
         }).catch(e => { st.naver_news = { ok:false, n:0, err:e.message }; }),
 
-      // 11. Google 뉴스 — 월드(영어) — 전세계 이슈 발굴용
-      fetch("/api/googlenews?topic=world")
-        .then(r=>r.json())
-        .then(d => {
-          const parsed = (d?.items||[]).map((it,i) => ({
-            id:`gnw_${i}_${Date.now()}`, source:"news_world",
-            title: it.title,
-            url:   it.url,
-            score: Math.max(25, 88 - i*3),
-            time:  it.pubDate ? new Date(it.pubDate).toISOString() : new Date().toISOString(),
-            extra: { press: it.source },
-          }));
-          all.push(...parsed);
-          st.news_world = { ok:true, n:parsed.length };
-        }).catch(e => { st.news_world = { ok:false, n:0, err:e.message }; }),
-
-      // 12. 유튜브 글로벌 급상승 — 여러 국가 루프 (이미 영상화된 세계 이슈 포착)
-      ...["US","GB","IN","BR","JP"].map(cc =>
-        fetch(`/api/youtube?type=trending&region=${cc}`)
+      // 11. 니치 바이럴 클립 — 유튜브 쇼츠 검색, 카테고리별 (영어 키워드로 글로벌 소스 타게팅)
+      // ⚠️ search.list는 quota 100단위/호출 — 6개 호출 = 새로고침 1회당 600단위 (일일 1만 기준 넉넉함)
+      ...NICHE_CATEGORIES.map(cat =>
+        fetch(`/api/youtube?type=search&q=${encodeURIComponent(cat.ytQuery)}&region=US&lang=en`)
           .then(r => r.json())
           .then(d => {
-            try {
-              const xml = new DOMParser().parseFromString(d.xml||"","text/xml");
-              const entries = Array.from(xml.querySelectorAll("entry"));
-              if (!entries.length) throw new Error("empty");
-              const parsed = entries.slice(0,8).map((e,i) => {
-                const linkEl = e.querySelector("link");
-                const href = linkEl?.getAttribute("href") || linkEl?.textContent || "";
-                return {
-                  id:`ytw_${cc}_${Date.now()}_${i}`, source:"youtube_world",
-                  title: e.querySelector("title")?.textContent||"",
-                  url:   href,
-                  score: Math.max(20, 85 - i*4),
-                  time:  e.querySelector("published")?.textContent||"",
-                  extra: {
-                    channel: e.querySelector("author name")?.textContent||"",
-                    country: cc,
-                  }
-                };
-              });
-              all.push(...parsed);
-              st.youtube_world = { ok:true, n:(st.youtube_world?.n||0)+parsed.length };
-            } catch(e) { /* 국가별 키/쿼터 문제는 조용히 스킵 — 다른 국가는 계속 수집 */ }
-          }).catch(() => {})
+            const videos = (d?.videos || []).filter(v => v.isShorts);
+            const parsed = videos.map((v, i) => {
+              const hrs = v.publishedAtFull ? Math.max(1, (Date.now() - new Date(v.publishedAtFull).getTime()) / 3600000) : 24;
+              const velocity = Math.round(v.viewCount / hrs);
+              return {
+                id: `${cat.id}_yt_${v.id}_${Date.now()}_${i}`, source: cat.id,
+                title: v.title, url: v.url,
+                score: Math.max(20, 90 - i * 4),
+                time: v.publishedAtFull || new Date().toISOString(),
+                extra: { platform: "유튜브", channel: v.channel, viewCount: v.viewCount, velocity, category: cat.label },
+              };
+            });
+            all.push(...parsed);
+            st[cat.id] = { ok: true, n: (st[cat.id]?.n || 0) + parsed.length };
+          }).catch(e => { st[cat.id] = { ok: false, n: 0, err: e.message }; })
       ),
+
+      // 12. 니치 바이럴 클립 — Reddit (14개 서브레딧 한 번에 수집 후 서브레딧별로 카테고리 재분류)
+      fetch("/api/reddit?flavor=niche")
+        .then(r => r.json())
+        .then(d => {
+          const posts = d?.posts || [];
+          posts.forEach((p, i) => {
+            const nicheId = SUB_TO_NICHE[(p.subreddit || "").toLowerCase()];
+            if (!nicheId) return; // 매핑 안 된 서브레딧은 스킵
+            const hrs = Math.max(1, (Date.now() - new Date(p.time).getTime()) / 3600000);
+            const velocity = Math.round((p.upvotes || 0) / hrs);
+            const cat = NICHE_CATEGORIES.find(c => c.id === nicheId);
+            all.push({
+              id: `${nicheId}_rd_${p.id}`, source: nicheId,
+              title: p.title, url: p.url,
+              score: p.score,
+              time: p.time,
+              extra: { platform: "Reddit", upvotes: p.upvotes, comments: p.comments, sub: p.subreddit, velocity, category: cat?.label },
+            });
+            st[nicheId] = { ok: true, n: (st[nicheId]?.n || 0) + 1 };
+          });
+        }).catch(e => { NICHE_CATEGORIES.forEach(c => { if (!st[c.id]) st[c.id] = { ok:false, n:0, err:e.message }; }); }),
 
     ]);
 
@@ -836,6 +864,7 @@ export default function TrendRadar() {
         body: JSON.stringify({
           title: item.title, url: item.url || "", source: item.source,
           country: item.extra?.country || "",
+          extra: item.extra || {},
         })
       });
       const d = await res.json();
@@ -865,8 +894,11 @@ export default function TrendRadar() {
       const res = await fetch("/api/analyze", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          type: "assess_issue",
-          issue: { title: issueItem.title, source: issueItem.source, url: issueItem.url },
+          type: "assess_clip",
+          issue: {
+            title: issueItem.title, source: issueItem.source, url: issueItem.url,
+            category: issueItem.extra?.category || "",
+          },
           apiKey,
         })
       });
@@ -1358,7 +1390,7 @@ export default function TrendRadar() {
                    bg:"rgba(255,68,68,.1)", bc:"rgba(255,68,68,.25)", tc:"#ff8080"},
                   {l:"📋 파이프라인",fn:e=>{e.stopPropagation();addToPipe(item);},
                    bg:C.gd, bc:C.gb, tc:C.g},
-                  {l:"🌍 이슈후보",  fn:e=>{e.stopPropagation();addToIssuePool(item);},
+                  {l:"🎬 클립후보",  fn:e=>{e.stopPropagation();addToIssuePool(item);},
                    bg:"rgba(56,189,248,.1)", bc:"rgba(56,189,248,.3)", tc:"#38bdf8"},
                 ].map(btn=>(
                   <button key={btn.l} onClick={btn.fn}
@@ -1917,7 +1949,8 @@ export default function TrendRadar() {
           }}>{issuesLoading?"새로고침 중...":"↻ 새로고침"}</button>
         </div>
         <div style={{fontSize:11.5,color:C.tm,lineHeight:1.7,marginBottom:14}}>
-          트렌드 목록에서 🌍 이슈후보 버튼으로 등록 → "1차 분석"으로 제작 가능성(시각자료·리스크·신선도·공감도) 판단 →
+          "니치 바이럴 클립" 그룹(유튜브 쇼츠·Reddit, 이색테크·미스터리·장인·심리실험·틈새상식·팩트체크)에서
+          🎬 클립후보 버튼으로 등록 → "1차 분석"으로 3초 후킹·시청지속 비결·재구성 앵글을 뽑아보고 →
           상태를 바꿔가며 추적하세요. (로컬 실행 중에만 저장됩니다 — <code style={{color:C.ts}}>npm run dev</code>)
         </div>
         <div style={{display:"flex",gap:6,marginBottom:16,flexWrap:"wrap"}}>
@@ -1936,7 +1969,7 @@ export default function TrendRadar() {
             <div style={{fontSize:48,marginBottom:14,opacity:.35}}>🌍</div>
             <div style={{fontSize:17,fontWeight:700,marginBottom:8}}>이슈 후보가 비어있어요</div>
             <div style={{fontSize:13,color:C.tm,lineHeight:1.8}}>
-              트렌드 목록(월드 이슈 그룹 추천)에서 🌍 이슈후보 버튼을 눌러보세요
+              트렌드 목록(니치 바이럴 클립 그룹 추천)에서 🎬 클립후보 버튼을 눌러보세요
             </div>
           </div>
         ) : (
@@ -1955,7 +1988,11 @@ export default function TrendRadar() {
                         {item.url ? <a href={item.url} target="_blank" rel="noreferrer" style={{color:"inherit",textDecoration:"none"}}>{item.title}</a> : item.title}
                       </div>
                       <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-                        <span style={{fontSize:10,fontFamily:C.m,color:C.tm}}>{item.source}{item.country?` · ${item.country}`:""}</span>
+                        <span style={{fontSize:10,fontFamily:C.m,color:C.tm}}>
+                          {item.extra?.platform || item.source}{item.extra?.category ? ` · ${item.extra.category}` : ""}
+                        </span>
+                        {item.extra?.viewCount != null && <span style={{fontSize:10,fontFamily:C.m,color:C.tm}}>👁 {item.extra.viewCount.toLocaleString()}</span>}
+                        {item.extra?.velocity != null && <span style={{fontSize:10,fontFamily:C.m,color:C.am}}>⚡ {item.extra.velocity.toLocaleString()}/h</span>}
                         <span style={{fontSize:10,fontFamily:C.m,color:C.tm}}>{timeAgo(item.lastSeenAt)}</span>
                         {item.seenCount>1 && <span style={{fontSize:10,fontFamily:C.m,color:C.tm}}>{item.seenCount}회 재등장</span>}
                       </div>
@@ -1972,20 +2009,16 @@ export default function TrendRadar() {
                     <div style={{marginTop:12,background:C.bg3,borderRadius:10,padding:"12px 14px"}}>
                       <div style={{fontSize:12.5,color:C.t,lineHeight:1.6,marginBottom:10}}>💬 {a.summary_ko}</div>
                       <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
-                        {[
-                          {l:`시각자료 ${a.visual_feasibility}`, c: a.visual_feasibility==="상"?C.g:a.visual_feasibility==="중"?C.am:C.r},
-                          {l:`리스크 ${a.risk_level}`,          c: a.risk_level==="낮음"?C.g:a.risk_level==="중간"?C.am:C.r},
-                          {l:`신선도 ${a.freshness}`,           c:C.cy},
-                          {l:`공감도 ${a.global_fit}`,          c: a.global_fit==="상"?C.g:a.global_fit==="중"?C.am:C.r},
-                          {l: a.recommended ? "✅ 추천" : "⚠️ 비추천", c: a.recommended?C.g:C.r},
-                        ].map((b,bi)=>(
-                          <span key={bi} style={{
-                            fontSize:10,fontFamily:C.m,fontWeight:800,padding:"2px 8px",borderRadius:20,
-                            background:`${b.c}18`,border:`1px solid ${b.c}40`,color:b.c,
-                          }}>{b.l}</span>
-                        ))}
+                        <span style={{
+                          fontSize:10,fontFamily:C.m,fontWeight:800,padding:"2px 8px",borderRadius:20,
+                          background: a.recommended?`${C.g}18`:`${C.r}18`, border:`1px solid ${a.recommended?C.g:C.r}40`,
+                          color: a.recommended?C.g:C.r,
+                        }}>{a.recommended ? "✅ 추천" : "⚠️ 비추천"}</span>
                       </div>
-                      <div style={{fontSize:11.5,color:C.ts,lineHeight:1.6,marginBottom:4}}><strong style={{color:C.tm}}>각도:</strong> {a.angle}</div>
+                      <div style={{fontSize:11.5,color:C.ts,lineHeight:1.6,marginBottom:4}}><strong style={{color:C.tm}}>⚡3초 후킹:</strong> {a.hook_point}</div>
+                      <div style={{fontSize:11.5,color:C.ts,lineHeight:1.6,marginBottom:4}}><strong style={{color:C.tm}}>👀 시청지속:</strong> {a.retention_secret}</div>
+                      <div style={{fontSize:11.5,color:C.ts,lineHeight:1.6,marginBottom:4}}><strong style={{color:C.tm}}>🔁 재구성 앵글:</strong> {a.remix_angle}</div>
+                      <div style={{fontSize:11.5,color:C.ts,lineHeight:1.6,marginBottom:4}}><strong style={{color:C.tm}}>🆕 신선도:</strong> {a.freshness_note}</div>
                       <div style={{fontSize:11.5,color:C.ts,lineHeight:1.6}}><strong style={{color:C.tm}}>종합:</strong> {a.verdict}</div>
                     </div>
                   ) : null}
@@ -2171,8 +2204,8 @@ export default function TrendRadar() {
               {id:"news_ent",    icon:"🎬", color:"#f472b6"},
               {id:"news_viral",  icon:"💥", color:"#f59e0b"},
               {id:"reddit_fun",  icon:"R",  color:"#ff4500"},
-              {id:"news_world",    icon:"📰", color:"#38bdf8"},
-              {id:"youtube_world", icon:"▶",  color:"#0ea5e9"},
+              {id:"niche_mystery",    icon:"🕵️", color:"#818cf8"},
+              {id:"niche_trivia",     icon:"💡", color:"#34d399"},
               {id:"google_kr",   icon:"🇰🇷", color:C.g},
             ].map(src => {
               const st = fStatus[src.id];

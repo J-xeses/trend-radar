@@ -31,10 +31,11 @@ export default async function handler(req, res) {
       return res.status(200).json({ xml, count: items.length, region: regionCode });
     }
 
-    // search: keyword search for benchmarking
+    // search: keyword search for benchmarking (lang: relevanceLanguage, default ko — 기존 호출 호환)
     if (type === "search" && q) {
       if (!YT_KEY) return res.status(200).json({ videos: [], error: "YOUTUBE_API_KEY not set" });
-      const url = "https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=" + encodeURIComponent(q) + "&regionCode=" + regionCode + "&relevanceLanguage=ko&maxResults=15&order=viewCount&key=" + YT_KEY;
+      const lang = req.query.lang || "ko";
+      const url = "https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=" + encodeURIComponent(q) + "&regionCode=" + regionCode + "&relevanceLanguage=" + lang + "&maxResults=15&order=viewCount&key=" + YT_KEY;
       const r = await fetch(url);
       if (!r.ok) { const e = await r.json(); throw new Error(e?.error?.message || "YouTube search error: " + r.status); }
       const data = await r.json();
@@ -64,6 +65,7 @@ export default async function handler(req, res) {
           channel: item.snippet?.channelTitle || "",
           thumbnail: item.snippet?.thumbnails?.medium?.url || "",
           publishedAt: item.snippet?.publishedAt?.substring(0,10) || "",
+          publishedAtFull: item.snippet?.publishedAt || "",
           url: "https://www.youtube.com/watch?v=" + vid,
           views: views >= 10000 ? (views/10000).toFixed(1) + "만" : views.toLocaleString(),
           viewCount: views,

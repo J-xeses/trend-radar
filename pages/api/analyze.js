@@ -46,28 +46,28 @@ JSON만: {"style":"shortform","logline":"한줄","characters":[{"name":"서여�
 - 참고 정보가 없는 한글 키워드는 보유한 지식으로 가장 가능성 높은 맥락을 짧게 추정하고, 확신이 없으면 "~관련 화제"처럼 완곡하게 표현.
 ${list}
 JSON 배열만 응답 (다른 텍스트 없이): [{"id":"항목id","summary_ko":"한글 설명"}, ...] - id는 원본의 [ ] 안 값을 그대로 사용.`;
-  } else if (type === "assess_issue") {
-    // issue: {title, source, url, context?} — 세계 이슈 쇼츠 채널의 "제작 준비 파이프라인" 1차 분석.
-    // 기존 트렌드 score(=인기도)와는 완전히 다른 축: "이걸로 쇼츠를 만들 수 있는가"를 판단한다.
-    prompt = `아래는 전세계 이슈/뉴스를 다루는 쇼츠 채널의 소재 후보다.
+  } else if (type === "assess_clip") {
+    // issue: {title, source, url, category?, platform?, context?}
+    // 니치 바이럴 클립 큐레이션(이색테크·미스터리·장인·심리실험·틈새상식·팩트체크)의 1차 분석.
+    // 뉴스 기사가 아니라 "이미 바이럴된 영상/게시물"이 소재이므로, 평가축도 민감도/시사성이
+    // 아니라 "왜 끌리는지 / 어떻게 재구성하면 더 잘 먹힐지"에 맞춘다. 이미 다뤄진 소재여도
+    // 감점하지 않는다 — 접하지 못한 시청자에게는 여전히 새 소재다.
+    prompt = `아래는 쇼츠 채널의 소재 후보로 수집된, 이미 바이럴된 영상/게시물이다.
 제목: "${issue.title}"
-소스: ${issue.source}${issue.context ? `\n참고 맥락: ${issue.context}` : ""}
+소스: ${issue.source}${issue.category ? ` / 카테고리: ${issue.category}` : ""}${issue.context ? `\n참고 맥락: ${issue.context}` : ""}
 
-이 소재를 쇼츠로 제작할 가치가 있는지 1차 분석해줘. 평가 기준:
-1. summary_ko: 이 이슈가 무엇인지 한국어 1~2문장 요약(배경지식 없는 시청자도 이해 가능하게)
-2. angle: 쇼츠로 만든다면 어떤 각도/프레이밍이 좋을지(예: "사실 요약형", "미스터리형", "숫자로 보는 충격", "현지 반응형" 등) 한 줄
-3. visual_feasibility: "상"/"중"/"하" — 뉴스 영상·사진·지도·그래픽 등 시각자료를 구하기 쉬운 소재인지
-4. visual_note: 위 판단의 근거 한 줄
-5. risk_level: "낮음"/"중간"/"높음" — 민감도(인명피해·정치적 논란·저작권 민감 소재 등) 리스크
-6. risk_note: 위 판단의 근거 한 줄
-7. freshness: "급함"/"보통"/"느슨" — 지금 바로 다뤄야 하는지, 며칠 지나도 괜찮은지
-8. global_fit: "상"/"중"/"하" — 한국 시청자가 자막/번역만으로 바로 공감·이해할 수 있는 소재인지(현지 맥락 의존도가 낮을수록 높음)
-9. recommended: true/false — 종합적으로 제작을 추천하는지
-10. verdict: 종합 판단 한 줄(왜 추천/비추천하는지)
+이 소재로 쇼츠를 재구성한다면 어떨지 1차 분석해줘. 평가 기준:
+1. summary_ko: 이 소재가 무엇에 관한 내용인지 한국어 1~2문장 요약(제목만 보고 모를 시청자도 이해 가능하게)
+2. hook_point: 영상을 본다면 "3초 안에 시선을 끌 포인트"가 뭘지 한 줄 추정(제목·카테고리 기반 추론임을 감안해 구체적으로)
+3. retention_secret: 끝까지 보게 만드는 요인(반전, 궁금증 지속, 비주얼 임팩트 등) 한 줄
+4. remix_angle: 이미 알려진 소재여도 새롭게 재구성할 앵글 제안(예: "한국 시청자가 모를 디테일 추가", "반전 순서 바꾸기", "다른 사례와 비교", "직접 검증/실험 재연") 한 줄 — 원본 그대로 베끼지 않고 차별화할 방법
+5. freshness_note: 이미 널리 퍼진 소재인지, 상대적으로 덜 알려진 소재인지 — "이미 다뤄졌어도 재구성 가치 있음"을 기본 전제로 중립적으로 평가(감점 요소 아님)
+6. recommended: true/false — 종합적으로 제작을 추천하는지
+7. verdict: 종합 판단 한 줄
 
-JSON만 응답: {"summary_ko":"...","angle":"...","visual_feasibility":"상","visual_note":"...","risk_level":"낮음","risk_note":"...","freshness":"보통","global_fit":"상","recommended":true,"verdict":"..."}`;
+JSON만 응답: {"summary_ko":"...","hook_point":"...","retention_secret":"...","remix_angle":"...","freshness_note":"...","recommended":true,"verdict":"..."}`;
   } else {
-    return res.status(400).json({ error: "type은 analyze, script, youtube_benchmark, cross_analysis, channel_analysis, drama_prompt, translate_titles, assess_issue 중 하나." });
+    return res.status(400).json({ error: "type은 analyze, script, youtube_benchmark, cross_analysis, channel_analysis, drama_prompt, translate_titles, assess_clip 중 하나." });
   }
   try {
     const response = await fetch(ANTHROPIC_URL, {

@@ -8,10 +8,13 @@ export default async function handler(req, res) {
       tech: "artificial+MachineLearning+technology+programming",
       // 흥미/화제 위주 — 교양·기술보다 SNS에서 바로 공감되는 소재
       fun: "popculture+entertainment+interestingasfuck+todayilearned+nottheonion+Showerthoughts",
+      // 니치 바이럴 클립 큐레이션용 6개 카테고리 서브레딧 묶음(인덱스단에서 subreddit별로 카테고리 재매핑)
+      niche: "gadgets+DIY+BeAmazed+UnresolvedMysteries+creepy+oddlysatisfying+educationalgifs+psychology+AskScienceDiscussion+todayilearned+Showerthoughts+interestingasfuck+nottheonion+explainlikeimfive",
     };
     const subs = SUBS[flavor] || SUBS.tech;
+    const limit = flavor === "niche" ? 50 : 25; // niche는 14개 서브레딧이 섞여있어 더 넉넉히
     const r = await fetch(
-      "https://www.reddit.com/r/" + subs + "/hot.json?limit=25",
+      "https://www.reddit.com/r/" + subs + "/hot.json?limit=" + limit,
       { headers: { "User-Agent": "TrendRadar/1.0" } }
     );
     if (!r.ok) throw new Error("Reddit fetch failed: " + r.status);
