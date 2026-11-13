@@ -163,11 +163,12 @@ export default async function handler(req, res) {
 
 이 영상을 실제로 본 것처럼 심층 분석하고, 우리 채널에서 원본을 그대로 쓰지 않고 재구성할 제작 플랜을 짜줘.
 - 프레임과 대본에서 직접 확인되는 것과 추정은 구분할 것(추정이면 "추정" 표기).
-- 원본 영상 클립을 그대로 재업로드하는 방식은 저작권 위험이 크므로, 재구성 플랜은 "직접 촬영/AI 생성 이미지·영상/스톡/공개 자료 + 우리 나레이션" 기준으로 짤 것. 원본 인용이 꼭 필요하면 범위와 위험을 명시.
+- 우리 채널 제작 방식: 오픈소스 영상·이미지(퍼블릭도메인·CC0·CC-BY 출처표기·무료 스톡)를 주재료로 편집·커스터마이징하고, 원본 영상은 꼭 필요한 짧은 구간만 일부 차용하며, 그 위에 한국어 나레이션 + 이야기를 이끄는 진행자(누구일지는 미정 — "진행자"로만 표기) 등장으로 연출 품질을 높인다. 원본 통째 재업로드는 하지 않는다.
+- 재구성 플랜 구간은 진행자 컷(훅·반전 리액션·마무리 등)과 소스 영상 컷이 자연스럽게 교차하도록 짤 것. 원본 일부 차용 구간은 최소화하고 이유를 visual에 적을 것.
 - 사실관계 주장이 있으면 검증이 필요한 항목으로 뽑을 것.
 
 JSON만 응답(다른 텍스트 없이):
-{"one_line":"이 영상이 무엇인지 한 줄","timeline":[{"t":"0:00-0:03","visual":"화면에 보이는 것","audio":"말/자막/소리","role":"훅|전개|긴장|반전|해답|CTA 중 하나"}],"hook_breakdown":{"first_frame":"첫 프레임이 주는 인상","first_line":"첫 대사/자막","technique":"어떤 후킹 기법인지(질문형·이상한 장면·숫자 충격 등)","why_works":"왜 3초 안에 멈추게 하는지"},"retention_mechanics":["시청 지속 장치1","장치2","장치3"],"story_structure":"전체 구조 한 줄(예: 일상의 의문 → 위험 암시 → 원리 설명 → 안도)","audience_reaction":{"main_feelings":"댓글에 드러난 주된 반응","questions":["시청자들이 궁금해하는 것1","2"],"debates":"논쟁/반박 포인트(없으면 빈 문자열)"},"facts_to_verify":["검증 필요한 주장1","2"],"remix_plan":{"titles":["한국어 제목안1","2","3"],"hook_line":"첫 3초 한국어 나레이션","beats":[{"sec":"0-3","narration":"나레이션","visual":"필요한 화면","source":"직접촬영|AI생성|스톡|공개자료|원본인용"}],"differentiation":"원본 대비 무엇을 더하거나 바꾸는지","length_sec":45},"visual_sourcing":"필요한 영상 소스를 저작권 안전하게 확보하는 방법","copyright_risk":{"level":"낮음|중간|높음","note":"이유와 권장"},"difficulty":"쉬움|보통|어려움","score":8,"verdict":"제작 추천 여부와 이유 한 줄"}` });
+{"one_line":"이 영상이 무엇인지 한 줄","timeline":[{"t":"0:00-0:03","visual":"화면에 보이는 것","audio":"말/자막/소리","role":"훅|전개|긴장|반전|해답|CTA 중 하나"}],"hook_breakdown":{"first_frame":"첫 프레임이 주는 인상","first_line":"첫 대사/자막","technique":"어떤 후킹 기법인지(질문형·이상한 장면·숫자 충격 등)","why_works":"왜 3초 안에 멈추게 하는지"},"retention_mechanics":["시청 지속 장치1","장치2","장치3"],"story_structure":"전체 구조 한 줄(예: 일상의 의문 → 위험 암시 → 원리 설명 → 안도)","audience_reaction":{"main_feelings":"댓글에 드러난 주된 반응","questions":["시청자들이 궁금해하는 것1","2"],"debates":"논쟁/반박 포인트(없으면 빈 문자열)"},"facts_to_verify":["검증 필요한 주장1","2"],"remix_plan":{"titles":["한국어 제목안1","2","3"],"hook_line":"첫 3초 한국어 나레이션","beats":[{"sec":"0-3","narration":"나레이션","visual":"필요한 화면","source":"오픈소스|원본일부차용|진행자|그래픽|AI생성"}],"differentiation":"원본 대비 무엇을 더하거나 바꾸는지","length_sec":45},"visual_sourcing":"필요한 영상 소스를 저작권 안전하게 확보하는 방법","copyright_risk":{"level":"낮음|중간|높음","note":"이유와 권장"},"difficulty":"쉬움|보통|어려움","score":8,"verdict":"제작 추천 여부와 이유 한 줄"}` });
 
     const r = await fetch(ANTHROPIC_URL, {
       method: "POST",

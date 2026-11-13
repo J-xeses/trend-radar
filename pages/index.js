@@ -291,6 +291,8 @@ export default function TrendRadar() {
   const [deepAnalyzing, setDeepAnalyzing] = useState({}); // {id:startedAtMs}
   const [deepErrors, setDeepErrors] = useState({});       // {id:"메시지"}
   const [deepOpen, setDeepOpen] = useState({});           // {id:true} 심층 분석 결과 펼침
+  const [srcChecking, setSrcChecking] = useState({});     // {id:true} 소스 확보 점검 중
+  const [srcOpen, setSrcOpen] = useState({});             // {id:true} 소스 점검 결과 펼침
   const [bgmMood, setBgmMood]         = useState("BGM_EMO");
   const [bgmKeywords, setBgmKeywords] = useState("");
   const [bgmResults, setBgmResults]   = useState([]);
@@ -980,6 +982,32 @@ export default function TrendRadar() {
       setDeepErrors(s => ({ ...s, [issueItem.id]: e.message || "심층 분석 실패" }));
     }
     setDeepAnalyzing(s => { const n = { ...s }; delete n[issueItem.id]; return n; });
+  }, [apiKey]);
+
+  // 소스 확보 점검 — 재구성 플랜 구간별로 오픈소스 창고 검색, 확보율 70% 이상이면 대본 단계로 진행 가능
+  const runSourceCheck = useCallback(async (issueItem) => {
+    setSrcChecking(s => ({ ...s, [issueItem.id]: true }));
+    setDeepErrors(s => { const n = { ...s }; delete n[issueItem.id]; return n; });
+    try {
+      const res = await fetch("/api/source-check", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ deep: issueItem.deep, sourceUrl: issueItem.url, apiKey }),
+      });
+      const d = await res.json().catch(() => ({ error: `응답 오류 (HTTP ${res.status})` }));
+      if (d.sourceCheck) {
+        setIssues(prev => prev.map(x => x.id===issueItem.id ? { ...x, sourceCheck: d.sourceCheck } : x));
+        setSrcOpen(s => ({ ...s, [issueItem.id]: true }));
+        fetch("/api/issues", {
+          method: "PATCH", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: issueItem.id, sourceCheck: d.sourceCheck })
+        }).catch(() => {});
+      } else {
+        setDeepErrors(s => ({ ...s, [issueItem.id]: "📦 " + (d.error || "소스 점검 실패") }));
+      }
+    } catch (e) {
+      setDeepErrors(s => ({ ...s, [issueItem.id]: "📦 " + (e.message || "소스 점검 실패") }));
+    }
+    setSrcChecking(s => { const n = { ...s }; delete n[issueItem.id]; return n; });
   }, [apiKey]);
 
   // 파이프라인 카드의 "후보풀로 전송" 버튼 -- yeori-studio proxy.js를 거쳐
@@ -2063,12 +2091,95 @@ export default function TrendRadar() {
             <span style={{fontFamily:C.m,color:C.tm}}>{b.sec}s</span>
             <span style={{color:C.t}}>{b.narration}</span>
             <span style={{color:C.ts}}>{b.visual}</span>
-            <span style={{fontSize:10,fontFamily:C.m,color:b.source==="원본인용"?C.r:C.g}}>{b.source}</span>
+            <span style={{fontSize:10,fontFamily:C.m,color:(b.source==="원본인용"||b.source==="원본일부차용")?C.am:b.source==="진행자"?"#38bdf8":C.g}}>{b.source}</span>
           </div>
         ))}
         {row("차별화:", d.remix_plan?.differentiation)}
         {row("소스 확보:", d.visual_sourcing)}
         {row("저작권:", d.copyright_risk?.note)}
+      </div>
+    );
+  };
+
+  // 소스 확보 점검 결과 카드 (함수 호출로 렌더 — 훅 사용 금지)
+  const renderSourceCheck = (item) => {
+    const sc = item.sourceCheck || {};
+    const pct = Math.round((sc.ratio||0)*100);
+    const passColor = sc.pass ? C.g : C.am;
+    const kindMeta = {
+      footage: { label:"소스", color:C.g }, original: { label:"원본차용", color:C.am },
+      host: { label:"진행자", color:"#38bdf8" }, graphic: { label:"그래픽", color:C.ts },
+    };
+    const tierMeta = {
+      free: { label:"표기불필요", color:C.g }, attr: { label:"출처표기", color:"#38bdf8" },
+      unknown: { label:"확인필요", color:C.am }, blocked: { label:"사용불가", color:C.r },
+    };
+    const credits = [];
+    (sc.beats||[]).forEach(b => (b.candidates||[]).forEach(c => { if (c.tier==="attr") credits.push(`"${c.title}" — ${c.author||"작자 미상"} / ${c.provider} / ${c.licenseLabel}`); }));
+    return (
+      <div style={{marginTop:12,background:"rgba(34,197,94,.05)",border:`1px solid ${passColor}40`,borderRadius:10,padding:"12px 14px"}}>
+        <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginBottom:8}}>
+          <span style={{fontSize:12,fontWeight:800,color:passColor}}>📦 소스 확보 점검</span>
+          <span style={{fontSize:12,fontWeight:800,fontFamily:C.m,color:passColor}}>{pct}%</span>
+          <span style={{fontSize:10.5,fontWeight:800,padding:"2px 8px",borderRadius:20,background:`${passColor}18`,border:`1px solid ${passColor}50`,color:passColor}}>
+            {sc.pass ? "✅ 제작 가능 (대본 단계 진행)" : `⚠️ 기준 ${Math.round((sc.passRatio||.7)*100)}% 미달`}
+          </span>
+          <span style={{fontSize:9.5,fontFamily:C.m,color:C.tm,marginLeft:"auto"}}>
+            소스구간 {sc.counts?.covered}/{sc.counts?.source} · 진행자 {sc.counts?.host} · 그래픽 {sc.counts?.graphic}{sc.counts?.borrowed ? ` · 원본차용 ${sc.counts.borrowed}` : ""}
+            {!sc.providers?.pexels ? " · Pexels 꺼짐" : ""} · {timeAgo(sc.checkedAt)}
+          </span>
+        </div>
+        {sc.providerErrors && Object.keys(sc.providerErrors).length>0 && (
+          <div style={{fontSize:10.5,color:C.am,marginBottom:8}}>
+            ⚠️ 검색 안 된 창고: {Object.entries(sc.providerErrors).map(([k,v])=>`${k}(${v})`).join(", ")} — 이 창고 결과는 확보율에 빠져 있어요
+          </div>
+        )}
+        <div style={{height:6,background:C.bg3,borderRadius:4,overflow:"hidden",marginBottom:10,position:"relative"}}>
+          <div style={{width:`${pct}%`,height:"100%",background:passColor}}/>
+          <div style={{position:"absolute",left:`${Math.round((sc.passRatio||.7)*100)}%`,top:0,bottom:0,width:2,background:C.t,opacity:.5}}/>
+        </div>
+        {(sc.beats||[]).map((b,i)=>{
+          const km = kindMeta[b.kind] || kindMeta.footage;
+          return (
+            <div key={i} style={{padding:"8px 0",borderTop:i?`1px solid ${C.b}`:"none"}}>
+              <div style={{display:"flex",gap:8,alignItems:"baseline",fontSize:11,lineHeight:1.5}}>
+                <span style={{fontFamily:C.m,color:C.tm,flexShrink:0,width:42}}>{b.sec}s</span>
+                <span style={{fontSize:10,fontWeight:800,color:km.color,flexShrink:0,width:52}}>{km.label}</span>
+                <span style={{color:C.ts,flex:1}}>{b.visual}</span>
+                {(b.kind==="footage"||b.kind==="original") && (
+                  <span style={{fontSize:10,fontFamily:C.m,flexShrink:0,color:b.usable?C.g:b.kind==="original"?C.am:C.r}}>
+                    {b.usable ? `✓ ${b.usable}건` : b.kind==="original" ? "원본 차용" : "✗ 없음"}
+                  </span>
+                )}
+              </div>
+              {b.queries?.length>0 && <div style={{fontSize:9.5,fontFamily:C.m,color:C.tm,margin:"3px 0 0 102px"}}>🔎 {b.queries.join(" · ")}</div>}
+              {b.candidates?.length>0 && (
+                <div style={{display:"flex",gap:6,overflowX:"auto",padding:"6px 0 2px 102px"}}>
+                  {b.candidates.map((c,j)=>{
+                    const tm = tierMeta[c.tier] || tierMeta.unknown;
+                    return (
+                      <a key={j} href={c.url} target="_blank" rel="noreferrer" title={`${c.title}\n${c.author||""}\n${c.licenseLabel}`}
+                        style={{flexShrink:0,width:112,textDecoration:"none",opacity:c.tier==="blocked"?.45:1}}>
+                        <div style={{width:112,height:63,borderRadius:6,background:C.bg3,border:`1px solid ${C.b}`,overflow:"hidden",position:"relative"}}>
+                          {c.thumb && <img src={c.thumb} alt="" loading="lazy" style={{width:"100%",height:"100%",objectFit:"cover"}}/>}
+                          {c.media==="video" && <span style={{position:"absolute",right:3,bottom:2,fontSize:9}}>🎬</span>}
+                        </div>
+                        <div style={{fontSize:9,fontFamily:C.m,color:C.tm,marginTop:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{c.provider}</div>
+                        <div style={{fontSize:9,fontWeight:700,color:tm.color,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{tm.label} · {c.licenseLabel}</div>
+                      </a>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+        {credits.length>0 && (
+          <details style={{marginTop:8}}>
+            <summary style={{fontSize:10.5,color:C.tm,cursor:"pointer"}}>출처 표기 후보 목록 ({credits.length}) — 실제 사용한 것만 영상 설명란에</summary>
+            <div style={{fontSize:10,fontFamily:C.m,color:C.ts,lineHeight:1.7,marginTop:6,whiteSpace:"pre-wrap"}}>{credits.join("\n")}</div>
+          </details>
+        )}
       </div>
     );
   };
@@ -2165,6 +2276,7 @@ export default function TrendRadar() {
                   ) : null}
 
                   {item.deep && deepOpen[item.id] ? renderDeep(item) : null}
+                  {item.sourceCheck && srcOpen[item.id] ? renderSourceCheck(item) : null}
                   {deepErrors[item.id] && (
                     <div style={{marginTop:10,fontSize:11.5,color:C.r,background:C.rd,border:`1px solid ${C.rb}`,borderRadius:8,padding:"8px 10px"}}>
                       🔬 {deepErrors[item.id]}
@@ -2189,6 +2301,21 @@ export default function TrendRadar() {
                         padding:"8px 12px",borderRadius:9,fontSize:11,fontWeight:700,
                         background:C.bg3,border:`1px solid ${C.b}`,color:C.ts,
                       }}>{deepOpen[item.id] ? "접기 ▲" : "심층 결과 ▼"}</button>
+                    )}
+                    {item.deep && (
+                      <button onClick={()=>runSourceCheck(item)} disabled={!!srcChecking[item.id]}
+                        title="재구성 플랜 구간별로 오픈소스(Wikimedia·NASA·Internet Archive·Pexels·YouTube CC) 검색, 확보율 70% 이상이면 제작 가능"
+                        style={{
+                        flex:1,padding:"8px",borderRadius:9,fontSize:11,fontWeight:700,
+                        background:"rgba(34,197,94,.10)",border:"1px solid rgba(34,197,94,.4)",color:C.g,
+                        opacity:srcChecking[item.id]?.55:1,
+                      }}>{srcChecking[item.id] ? "📦 소스 찾는 중..." : item.sourceCheck ? `📦 소스 재점검 (${Math.round(item.sourceCheck.ratio*100)}%)` : "📦 소스 확보 점검"}</button>
+                    )}
+                    {item.sourceCheck && (
+                      <button onClick={()=>setSrcOpen(s=>({ ...s, [item.id]: !s[item.id] }))} style={{
+                        padding:"8px 12px",borderRadius:9,fontSize:11,fontWeight:700,
+                        background:C.bg3,border:`1px solid ${C.b}`,color:C.ts,
+                      }}>{srcOpen[item.id] ? "접기 ▲" : "소스 ▼"}</button>
                     )}
                   </div>
                 </div>
