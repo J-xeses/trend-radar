@@ -984,14 +984,14 @@ export default function TrendRadar() {
     setDeepAnalyzing(s => { const n = { ...s }; delete n[issueItem.id]; return n; });
   }, [apiKey]);
 
-  // 소스 확보 점검 — 재구성 플랜 구간별로 오픈소스 창고 검색, 확보율 70% 이상이면 대본 단계로 진행 가능
+  // 재구성 점검 — 원본 타임라인 구간별로 교체 방식 결정 + 오픈소스 검색 + 관련성 필터, 재구성률 70% 이상이면 대본 단계
   const runSourceCheck = useCallback(async (issueItem) => {
     setSrcChecking(s => ({ ...s, [issueItem.id]: true }));
     setDeepErrors(s => { const n = { ...s }; delete n[issueItem.id]; return n; });
     try {
       const res = await fetch("/api/source-check", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ deep: issueItem.deep, sourceUrl: issueItem.url, apiKey }),
+        body: JSON.stringify({ id: issueItem.id, deep: issueItem.deep, sourceUrl: issueItem.url, apiKey }),
       });
       const d = await res.json().catch(() => ({ error: `응답 오류 (HTTP ${res.status})` }));
       if (d.sourceCheck) {
@@ -2101,8 +2101,105 @@ export default function TrendRadar() {
     );
   };
 
-  // 소스 확보 점검 결과 카드 (함수 호출로 렌더 — 훅 사용 금지)
+  // 소스 재구성 점검 결과 카드 — 원본 고정틀 방식(mode:"frame"). 함수 호출로 렌더 — 훅 사용 금지
   const renderSourceCheck = (item) => {
+    const sc = item.sourceCheck || {};
+    if (sc.mode !== "frame") return renderSourceCheckLegacy(item);
+    const pct = Math.round((sc.ratio||0)*100);
+    const passColor = sc.pass ? C.g : C.am;
+    const outMeta = {
+      replaced: { label:"오픈소스 교체", color:C.g }, keep: { label:"원본 유지", color:C.am },
+      host: { label:"진행자 컷", color:"#38bdf8" }, graphic: { label:"그래픽 재제작", color:"#a78bfa" },
+    };
+    const scoreMeta = { 2:{label:"✓ 대체 가능",color:C.g}, 1:{label:"△ 보조 B-roll",color:C.am}, 0:{label:"✗ 무관",color:C.r} };
+    const tot = sc.counts?.totalSec || 1;
+    const segs = sc.segments || [];
+    const credits = [];
+    segs.forEach(s => (s.candidates||[]).forEach(c => { if (c.tier==="attr" && c.score>=1) credits.push(`"${c.title}" — ${c.author||"작자 미상"} / ${c.provider} / ${c.licenseLabel}`); }));
+    return (
+      <div style={{marginTop:12,background:"rgba(34,197,94,.05)",border:`1px solid ${passColor}40`,borderRadius:10,padding:"12px 14px"}}>
+        <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginBottom:6}}>
+          <span style={{fontSize:12,fontWeight:800,color:passColor}}>📦 재구성 점검</span>
+          <span style={{fontSize:12,fontWeight:800,fontFamily:C.m,color:passColor}}>재구성률 {pct}%</span>
+          <span style={{fontSize:10.5,fontWeight:800,padding:"2px 8px",borderRadius:20,background:`${passColor}18`,border:`1px solid ${passColor}50`,color:passColor}}>
+            {sc.pass ? "✅ 제작 가능 (대본 단계 진행)" : `⚠️ 기준 ${Math.round((sc.passRatio||.7)*100)}% 미달`}
+          </span>
+          <span style={{fontSize:9.5,fontFamily:C.m,color:C.tm,marginLeft:"auto"}}>
+            원본 유지 {sc.counts?.keepSec}s/{sc.counts?.totalSec}s · 교체 {sc.counts?.replaced}/{sc.counts?.replaceTried} · 진행자 {sc.counts?.host} · 그래픽 {sc.counts?.graphic}
+            {!sc.providers?.pexels ? " · Pexels 꺼짐" : ""} · {timeAgo(sc.checkedAt)}
+          </span>
+        </div>
+        <div style={{fontSize:10.5,color:C.tm,marginBottom:8}}>원본 전체를 고정틀로 두고, 구간마다 무엇으로 바꿔 끼울지 정한 결과예요. 후보는 Claude가 원본 프레임과 썸네일을 직접 비교해 걸렀어요.</div>
+        {sc.providerErrors && Object.keys(sc.providerErrors).length>0 && (
+          <div style={{fontSize:10.5,color:C.am,marginBottom:8}}>
+            ⚠️ 검색 안 된 창고: {Object.entries(sc.providerErrors).map(([k,v])=>`${k}(${v})`).join(", ")}
+          </div>
+        )}
+        {/* 원본 타임라인 위에 구간별 처리 방식을 색으로 표시 */}
+        <div style={{display:"flex",height:14,borderRadius:4,overflow:"hidden",marginBottom:4,border:`1px solid ${C.b}`}}>
+          {segs.map((s,i)=>{ const om = outMeta[s.outcome]||outMeta.keep; return (
+            <div key={i} title={`${s.t} ${om.label}`} style={{width:`${(s.len/tot)*100}%`,background:om.color,opacity:.75,borderRight:i<segs.length-1?`1px solid ${C.bg}`:"none"}}/>
+          );})}
+        </div>
+        <div style={{display:"flex",gap:10,fontSize:9.5,color:C.tm,marginBottom:10,flexWrap:"wrap"}}>
+          {Object.values(outMeta).map(m=><span key={m.label}><span style={{display:"inline-block",width:8,height:8,borderRadius:2,background:m.color,marginRight:4}}/>{m.label}</span>)}
+        </div>
+        {segs.map((s,i)=>{
+          const om = outMeta[s.outcome] || outMeta.keep;
+          return (
+            <div key={i} style={{padding:"8px 0",borderTop:i?`1px solid ${C.b}`:"none"}}>
+              <div style={{display:"flex",gap:8,alignItems:"flex-start",fontSize:11,lineHeight:1.5}}>
+                {s.frame
+                  ? <img src={`/api/deep-frame?id=${encodeURIComponent(item.id)}&f=${s.frame}`} alt="" loading="lazy" style={{width:40,height:71,objectFit:"cover",borderRadius:4,flexShrink:0,border:`1px solid ${C.b}`}}/>
+                  : <div style={{width:40,flexShrink:0}}/>}
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{display:"flex",gap:8,alignItems:"baseline",flexWrap:"wrap"}}>
+                    <span style={{fontFamily:C.m,color:C.tm}}>{s.t}</span>
+                    <span style={{fontSize:10,fontWeight:800,color:om.color}}>{om.label}</span>
+                    {s.kind==="replace" && (
+                      <span style={{fontSize:10,fontFamily:C.m,color:s.matched?C.g:C.am}}>
+                        {s.matched ? `대체 가능 ${s.matched}건` : "맞는 소스 없음 → 원본 유지"}{s.partial ? ` · 보조 ${s.partial}건` : ""}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{color:C.ts}}>{s.visual}</div>
+                  {s.queries?.length>0 && <div style={{fontSize:9.5,fontFamily:C.m,color:C.tm,marginTop:2}}>🔎 {s.queries.join(" · ")}</div>}
+                </div>
+              </div>
+              {s.candidates?.length>0 && (
+                <div style={{display:"flex",gap:6,overflowX:"auto",padding:"6px 0 2px 48px"}}>
+                  {s.candidates.map((c,j)=>{
+                    const sm = c.score!=null ? scoreMeta[c.score] : null;
+                    const dim = c.score===0 || c.tier==="blocked" || c.tier==="unknown";
+                    return (
+                      <a key={j} href={c.url} target="_blank" rel="noreferrer" title={`${c.title}\n${c.author||""}\n${c.licenseLabel}${c.note?`\n판정: ${c.note}`:""}`}
+                        style={{flexShrink:0,width:112,textDecoration:"none",opacity:dim?.4:1}}>
+                        <div style={{width:112,height:63,borderRadius:6,background:C.bg3,border:`1px solid ${sm?sm.color+"80":C.b}`,overflow:"hidden",position:"relative"}}>
+                          {c.thumb && <img src={c.thumb} alt="" loading="lazy" style={{width:"100%",height:"100%",objectFit:"cover"}}/>}
+                          {c.media==="video" && <span style={{position:"absolute",right:3,bottom:2,fontSize:9}}>🎬</span>}
+                        </div>
+                        <div style={{fontSize:9,fontWeight:700,color:sm?sm.color:C.tm,marginTop:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{sm?sm.label:"판정 안 됨"}{c.note?` · ${c.note}`:""}</div>
+                        <div style={{fontSize:9,fontFamily:C.m,color:C.tm,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{c.provider} · {c.licenseLabel}</div>
+                      </a>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+        {credits.length>0 && (
+          <details style={{marginTop:8}}>
+            <summary style={{fontSize:10.5,color:C.tm,cursor:"pointer"}}>출처 표기 후보 목록 ({credits.length}) — 실제 사용한 것만 영상 설명란에</summary>
+            <div style={{fontSize:10,fontFamily:C.m,color:C.ts,lineHeight:1.7,marginTop:6,whiteSpace:"pre-wrap"}}>{credits.join("\n")}</div>
+          </details>
+        )}
+      </div>
+    );
+  };
+
+  // 이전 방식(재구성 플랜 beats 기반, 2026-11-13) 결과 표시 — 다시 점검하면 새 방식으로 바뀜
+  const renderSourceCheckLegacy = (item) => {
     const sc = item.sourceCheck || {};
     const pct = Math.round((sc.ratio||0)*100);
     const passColor = sc.pass ? C.g : C.am;
@@ -2304,12 +2401,12 @@ export default function TrendRadar() {
                     )}
                     {item.deep && (
                       <button onClick={()=>runSourceCheck(item)} disabled={!!srcChecking[item.id]}
-                        title="재구성 플랜 구간별로 오픈소스(Wikimedia·NASA·Internet Archive·Pexels·YouTube CC) 검색, 확보율 70% 이상이면 제작 가능"
+                        title="원본 전체를 고정틀로 두고 구간마다 오픈소스 교체·진행자·그래픽·원본유지를 정함. 후보는 Claude가 원본 프레임과 비교해 관련성 판정. 재구성률 70% 이상이면 제작 가능"
                         style={{
                         flex:1,padding:"8px",borderRadius:9,fontSize:11,fontWeight:700,
                         background:"rgba(34,197,94,.10)",border:"1px solid rgba(34,197,94,.4)",color:C.g,
                         opacity:srcChecking[item.id]?.55:1,
-                      }}>{srcChecking[item.id] ? "📦 소스 찾는 중..." : item.sourceCheck ? `📦 소스 재점검 (${Math.round(item.sourceCheck.ratio*100)}%)` : "📦 소스 확보 점검"}</button>
+                      }}>{srcChecking[item.id] ? "📦 소스 찾고 판정 중... (30초~1분)" : item.sourceCheck ? `📦 재구성 재점검 (${Math.round(item.sourceCheck.ratio*100)}%)` : "📦 재구성 점검"}</button>
                     )}
                     {item.sourceCheck && (
                       <button onClick={()=>setSrcOpen(s=>({ ...s, [item.id]: !s[item.id] }))} style={{
