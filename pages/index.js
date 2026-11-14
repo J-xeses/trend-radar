@@ -1,3 +1,4 @@
+import LongformPanel from "../components/LongformPanel";
 import { useState, useEffect, useCallback, useRef } from "react";
 import Head from "next/head";
 
@@ -16,6 +17,7 @@ const Ic = ({ n, s=16, c="currentColor" }) => {
     plus:    <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
     check:   <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>,
     globe:   <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>,
+    archive: <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><line x1="10" y1="12" x2="14" y2="12"/></svg>,
     music:   <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>,
   };
   return icons[n] || null;
@@ -176,6 +178,7 @@ const ACTION_TABS = [
   { id:"pipeline",label:"파이프라인",      icon:"pipe",    color:C.g,    desc:"콘텐츠 제작 관리"              },
   { id:"issues",  label:"이슈 후보",       icon:"globe",   color:"#38bdf8", desc:"전세계 이슈 1차 분석·제작 가능성 추적" },
   { id:"bgm",     label:"BGM 레이더",      icon:"music",   color:C.cy,   desc:"트렌드 무드에 맞는 무료 BGM 검색" },
+  { id:"longform",label:"롱폼 소재",       icon:"archive", color:"#10c98a", desc:"오래 찾아보는 10분+ 롱폼 소재 창고" },
 ];
 
 // ---
@@ -1118,7 +1121,7 @@ export default function TrendRadar() {
     .tc:hover{background:${C.bg3};border-color:${C.b2};transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,.45)}
 
     /* action card */
-    .act-card{border-radius:16px;padding:20px 22px;cursor:pointer;transition:all .18s;border:2px solid transparent;flex:1;min-width:0}
+    .act-card{border-radius:14px;padding:13px 13px 12px;cursor:pointer;transition:all .18s;border:2px solid transparent;flex:1;min-width:0}
     .act-card:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,0,0,.4)}
     .act-card.on{transform:translateY(-2px)}
 
@@ -1323,7 +1326,7 @@ export default function TrendRadar() {
   // ---
   const ActionBar = () => (
     <div style={{
-      display:"flex",gap:10,padding:"18px 22px 14px",
+      display:"flex",gap:8,padding:"14px 18px 12px",
       borderBottom:`1px solid ${C.b}`,
       background:C.bg1,
     }}>
@@ -1349,12 +1352,12 @@ export default function TrendRadar() {
           >
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
               <div style={{
-                width:36,height:36,borderRadius:10,
+                width:30,height:30,borderRadius:9,
                 background: isOn ? `${at.color}20` : C.bg3,
                 display:"flex",alignItems:"center",justifyContent:"center",
                 flexShrink:0,
               }}>
-                <Ic n={at.icon} s={16} c={isOn?at.color:C.tm}/>
+                <Ic n={at.icon} s={14} c={isOn?at.color:C.tm}/>
               </div>
               {badge!=null && (
                 <span style={{
@@ -1372,7 +1375,7 @@ export default function TrendRadar() {
               marginBottom:3,lineHeight:1.3,
             }}>{at.label}</div>
             <div style={{
-              fontSize:10,color:C.tm,lineHeight:1.4,
+              fontSize:10,color:C.tm,lineHeight:1.4,overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",
             }}>{at.desc}</div>
           </div>
         );
@@ -2737,6 +2740,7 @@ export default function TrendRadar() {
               {actionTab==="cross"    && CrossPanel()}
               {actionTab==="pipeline" && PipelinePanel()}
               {actionTab==="issues"   && IssuesPanel()}
+              {actionTab==="longform" && <LongformPanel apiKey={apiKey}/>}
               {actionTab==="bgm"      && BgmPanel()}
             </div>
           </main>
