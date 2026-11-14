@@ -1010,6 +1010,40 @@ export default function TrendRadar() {
     setSrcChecking(s => { const n = { ...s }; delete n[issueItem.id]; return n; });
   }, [apiKey]);
 
+  // 재구성 점검 구간별 처리 방식 수동 변경 — 자동 판정(outcome)은 그대로 두고 override로 덮어씀.
+  // 재구성률·통과 여부는 실효 처리방식(override||outcome)으로 다시 계산. 바꾸면 확정 상태는 풀림.
+  const recomputeSourceCheck = (sc) => {
+    const segs = sc.segments || [];
+    const eff = (s) => s.override || s.outcome;
+    const total = segs.reduce((a, s) => a + (s.len||0), 0) || 1;
+    const keepSec = segs.filter(s => eff(s)==="keep").reduce((a, s) => a + (s.len||0), 0);
+    const ratio = +((total - keepSec) / total).toFixed(2);
+    const n = (o) => segs.filter(s => eff(s)===o).length;
+    return { ...sc, ratio, pass: ratio >= (sc.passRatio||.7),
+      counts: { ...sc.counts, replaced:n("replaced"), host:n("host"), graphic:n("graphic"), keep:n("keep"), keepSec:+keepSec.toFixed(1) } };
+  };
+  const saveSourceCheck = (issueId, sc) => {
+    setIssues(prev => prev.map(x => x.id===issueId ? { ...x, sourceCheck: sc } : x));
+    fetch("/api/issues", { method:"PATCH", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ id: issueId, sourceCheck: sc }) }).catch(() => {});
+  };
+  const setSegOutcome = (item, idx, outcome) => {
+    const sc = item.sourceCheck;
+    const segments = sc.segments.map((s, i) => {
+      if (i !== idx) return s;
+      const n = { ...s };
+      if (outcome === s.outcome) delete n.override; else n.override = outcome; // 자동 판정과 같으면 수동 표시 해제
+      return n;
+    });
+    const next = recomputeSourceCheck({ ...sc, segments });
+    delete next.confirmedAt;
+    saveSourceCheck(item.id, next);
+  };
+  const confirmSourceCheck = (item, on) => {
+    const next = { ...item.sourceCheck };
+    if (on) next.confirmedAt = new Date().toISOString(); else delete next.confirmedAt;
+    saveSourceCheck(item.id, next);
+  };
+
   // 파이프라인 카드의 "후보풀로 전송" 버튼 -- yeori-studio proxy.js를 거쳐
   // content_matrix_v3.html 사이드바의 "🔥 트렌드 분석" 목록에 전달한다.
   // (TREND RADAR와 content_matrix_v3.html은 origin이 달라 localStorage 직접
@@ -2122,14 +2156,15 @@ export default function TrendRadar() {
           <span style={{fontSize:12,fontWeight:800,color:passColor}}>📦 재구성 점검</span>
           <span style={{fontSize:12,fontWeight:800,fontFamily:C.m,color:passColor}}>재구성률 {pct}%</span>
           <span style={{fontSize:10.5,fontWeight:800,padding:"2px 8px",borderRadius:20,background:`${passColor}18`,border:`1px solid ${passColor}50`,color:passColor}}>
-            {sc.pass ? "✅ 제작 가능 (대본 단계 진행)" : `⚠️ 기준 ${Math.round((sc.passRatio||.7)*100)}% 미달`}
+            {sc.pass ? "✅ 기준 통과" : `⚠️ 기준 ${Math.round((sc.passRatio||.7)*100)}% 미달`}
           </span>
+          {sc.confirmedAt && <span style={{fontSize:10.5,fontWeight:800,padding:"2px 8px",borderRadius:20,background:"rgba(244,114,182,.15)",border:"1px solid rgba(244,114,182,.5)",color:"#f472b6"}}>🔒 구간 처리 확정</span>}
           <span style={{fontSize:9.5,fontFamily:C.m,color:C.tm,marginLeft:"auto"}}>
-            원본 유지 {sc.counts?.keepSec}s/{sc.counts?.totalSec}s · 교체 {sc.counts?.replaced}/{sc.counts?.replaceTried} · 진행자 {sc.counts?.host} · 그래픽 {sc.counts?.graphic}
+            원본 유지 {sc.counts?.keepSec}s/{sc.counts?.totalSec}s · 교체 {sc.counts?.replaced} · 진행자 {sc.counts?.host} · 그래픽 {sc.counts?.graphic}
             {!sc.providers?.pexels ? " · Pexels 꺼짐" : ""} · {timeAgo(sc.checkedAt)}
           </span>
         </div>
-        <div style={{fontSize:10.5,color:C.tm,marginBottom:8}}>원본 전체를 고정틀로 두고, 구간마다 무엇으로 바꿔 끼울지 정한 결과예요. 후보는 Claude가 원본 프레임과 썸네일을 직접 비교해 걸렀어요.</div>
+        <div style={{fontSize:10.5,color:C.tm,marginBottom:8}}>원본 전체를 고정틀로 두고, 구간마다 무엇으로 바꿔 끼울지 정한 결과예요. 후보는 Claude가 원본 프레임과 썸네일을 직접 비교해 걸렀어요. 구간 옆 버튼으로 처리 방식을 바꿀 수 있고, 다 정했으면 아래에서 확정하세요.</div>
         {sc.providerErrors && Object.keys(sc.providerErrors).length>0 && (
           <div style={{fontSize:10.5,color:C.am,marginBottom:8}}>
             ⚠️ 검색 안 된 창고: {Object.entries(sc.providerErrors).map(([k,v])=>`${k}(${v})`).join(", ")}
@@ -2137,7 +2172,7 @@ export default function TrendRadar() {
         )}
         {/* 원본 타임라인 위에 구간별 처리 방식을 색으로 표시 */}
         <div style={{display:"flex",height:14,borderRadius:4,overflow:"hidden",marginBottom:4,border:`1px solid ${C.b}`}}>
-          {segs.map((s,i)=>{ const om = outMeta[s.outcome]||outMeta.keep; return (
+          {segs.map((s,i)=>{ const om = outMeta[s.override||s.outcome]||outMeta.keep; return (
             <div key={i} title={`${s.t} ${om.label}`} style={{width:`${(s.len/tot)*100}%`,background:om.color,opacity:.75,borderRight:i<segs.length-1?`1px solid ${C.bg}`:"none"}}/>
           );})}
         </div>
@@ -2145,7 +2180,8 @@ export default function TrendRadar() {
           {Object.values(outMeta).map(m=><span key={m.label}><span style={{display:"inline-block",width:8,height:8,borderRadius:2,background:m.color,marginRight:4}}/>{m.label}</span>)}
         </div>
         {segs.map((s,i)=>{
-          const om = outMeta[s.outcome] || outMeta.keep;
+          const effOut = s.override || s.outcome;
+          const om = outMeta[effOut] || outMeta.keep;
           return (
             <div key={i} style={{padding:"8px 0",borderTop:i?`1px solid ${C.b}`:"none"}}>
               <div style={{display:"flex",gap:8,alignItems:"flex-start",fontSize:11,lineHeight:1.5}}>
@@ -2155,7 +2191,20 @@ export default function TrendRadar() {
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{display:"flex",gap:8,alignItems:"baseline",flexWrap:"wrap"}}>
                     <span style={{fontFamily:C.m,color:C.tm}}>{s.t}</span>
-                    <span style={{fontSize:10,fontWeight:800,color:om.color}}>{om.label}</span>
+                    <span style={{display:"inline-flex",gap:3,flexWrap:"wrap"}}>
+                      {Object.entries(outMeta).map(([k,m])=>{
+                        const on = effOut===k;
+                        return (
+                          <button key={k} onClick={()=>setSegOutcome(item,i,k)}
+                            title={k===s.outcome ? "자동 판정" : "클릭해서 이 처리 방식으로 바꾸기"}
+                            style={{fontSize:9.5,fontWeight:on?800:600,padding:"1px 7px",borderRadius:20,cursor:"pointer",
+                              background:on?m.color+"28":"transparent",border:`1px solid ${on?m.color:C.b}`,color:on?m.color:C.tm}}>
+                            {m.label}{k===s.outcome?" ·자동":""}
+                          </button>
+                        );
+                      })}
+                      {s.override && <span style={{fontSize:9.5,fontWeight:800,color:"#f472b6",alignSelf:"center"}}>✎ 수동</span>}
+                    </span>
                     {s.kind==="replace" && (
                       <span style={{fontSize:10,fontFamily:C.m,color:s.matched?C.g:C.am}}>
                         {s.matched ? `대체 가능 ${s.matched}건` : "맞는 소스 없음 → 원본 유지"}{s.partial ? ` · 보조 ${s.partial}건` : ""}
@@ -2194,6 +2243,23 @@ export default function TrendRadar() {
             <div style={{fontSize:10,fontFamily:C.m,color:C.ts,lineHeight:1.7,marginTop:6,whiteSpace:"pre-wrap"}}>{credits.join("\n")}</div>
           </details>
         )}
+        <div style={{display:"flex",gap:8,alignItems:"center",marginTop:10,paddingTop:10,borderTop:`1px solid ${C.b}`,flexWrap:"wrap"}}>
+          {sc.confirmedAt ? (
+            <>
+              <span style={{fontSize:11,color:"#f472b6",fontWeight:700}}>🔒 {timeAgo(sc.confirmedAt)} 확정 — 재구성률 {pct}%{segs.some(s=>s.override)?` · 수동 변경 ${segs.filter(s=>s.override).length}구간`:""}</span>
+              <button onClick={()=>confirmSourceCheck(item,false)} style={{marginLeft:"auto",fontSize:10.5,padding:"5px 10px",borderRadius:8,background:"none",border:`1px solid ${C.b}`,color:C.tm,cursor:"pointer"}}>확정 풀기</button>
+            </>
+          ) : (
+            <>
+              <span style={{fontSize:10.5,color:C.tm}}>{sc.pass ? "구간 처리를 다 정했으면 확정하세요." : `재구성률이 ${Math.round((sc.passRatio||.7)*100)}% 미만이에요 — 원본 유지 구간을 다른 방식으로 바꿔 보세요.`}</span>
+              <button onClick={()=>confirmSourceCheck(item,true)} disabled={!sc.pass}
+                style={{marginLeft:"auto",fontSize:11,fontWeight:800,padding:"6px 12px",borderRadius:8,cursor:sc.pass?"pointer":"not-allowed",
+                  background:sc.pass?"rgba(244,114,182,.15)":"transparent",border:`1px solid ${sc.pass?"#f472b6":C.b}`,color:sc.pass?"#f472b6":C.tm,opacity:sc.pass?1:.5}}>
+                🔒 구간 처리 확정
+              </button>
+            </>
+          )}
+        </div>
       </div>
     );
   };
