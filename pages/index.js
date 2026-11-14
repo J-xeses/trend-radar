@@ -2432,7 +2432,32 @@ export default function TrendRadar() {
                           background: a.recommended?`${C.g}18`:`${C.r}18`, border:`1px solid ${a.recommended?C.g:C.r}40`,
                           color: a.recommended?C.g:C.r,
                         }}>{a.recommended ? "✅ 추천" : "⚠️ 비추천"}</span>
+                        {a.participation && (() => {
+                          const ps = a.participation.score ?? 0;
+                          const pc = ps >= 70 ? C.g : ps >= 45 ? C.am : C.r;
+                          return <span title="Virtal 핵심 기준: '왜?'에 대해 시청자가 댓글로 자기 생각을 쓰고 의견을 펼칠 잠재력" style={{
+                            fontSize:10,fontFamily:C.m,fontWeight:800,padding:"2px 8px",borderRadius:20,
+                            background:`${pc}18`,border:`1px solid ${pc}40`,color:pc,
+                          }}>💬 댓글 참여 {ps}</span>;
+                        })()}
                       </div>
+                      {(a.why_question || a.participation) && (
+                        <div style={{background:C.bg2,border:`1px solid ${C.b}`,borderRadius:8,padding:"8px 10px",marginBottom:10}}>
+                          {a.why_question && <div style={{fontSize:12,color:C.t,fontWeight:700,marginBottom:4}}>❓ {a.why_question}</div>}
+                          {a.participation && <>
+                            <div style={{fontSize:10.5,fontFamily:C.m,color:C.tm,marginBottom:4}}>
+                              추측 쉬움 {a.participation.guessable}/3 · 직관과 엇갈림 {a.participation.intuition_gap}/3 · 내 경험 연결 {a.participation.personal}/3 · 안전한 논쟁 {a.participation.safe_debate}/3
+                            </div>
+                            {a.participation.split && <div style={{fontSize:11.5,color:C.ts,lineHeight:1.6}}><strong style={{color:C.tm}}>⚔️ 댓글이 갈릴 곳:</strong> {a.participation.split}</div>}
+                            {a.participation.closing_question && <div style={{fontSize:11.5,color:C.ts,lineHeight:1.6}}><strong style={{color:C.tm}}>❔ 마지막 물음표:</strong> {a.participation.closing_question}</div>}
+                          </>}
+                          {item.deep?.audience_reaction && (item.deep.audience_reaction.debates || item.deep.audience_reaction.questions?.length) ? (
+                            <div style={{fontSize:11.5,color:C.cy,lineHeight:1.6,marginTop:4}}>
+                              <strong>📊 원본 댓글 실측:</strong> {[item.deep.audience_reaction.debates, ...(item.deep.audience_reaction.questions||[]).slice(0,2)].filter(Boolean).join(" / ")}
+                            </div>
+                          ) : null}
+                        </div>
+                      )}
                       <div style={{fontSize:11.5,color:C.ts,lineHeight:1.6,marginBottom:4}}><strong style={{color:C.tm}}>⚡3초 후킹:</strong> {a.hook_point}</div>
                       <div style={{fontSize:11.5,color:C.ts,lineHeight:1.6,marginBottom:4}}><strong style={{color:C.tm}}>👀 시청지속:</strong> {a.retention_secret}</div>
                       <div style={{fontSize:11.5,color:C.ts,lineHeight:1.6,marginBottom:4}}><strong style={{color:C.tm}}>🔁 재구성 앵글:</strong> {a.remix_angle}</div>

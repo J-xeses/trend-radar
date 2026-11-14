@@ -64,10 +64,19 @@ JSON 배열만 응답 (다른 텍스트 없이): [{"id":"항목id","summary_ko":
 3. retention_secret: 끝까지 보게 만드는 요인(반전, 궁금증 지속, 비주얼 임팩트 등) 한 줄
 4. remix_angle: 이미 알려진 소재여도 새롭게 재구성할 앵글 제안(예: "한국 시청자가 모를 디테일 추가", "반전 순서 바꾸기", "다른 사례와 비교", "직접 검증/실험 재연") 한 줄 — 원본 그대로 베끼지 않고 차별화할 방법
 5. freshness_note: 이미 널리 퍼진 소재인지, 상대적으로 덜 알려진 소재인지 — "이미 다뤄졌어도 재구성 가치 있음"을 기본 전제로 중립적으로 평가(감점 요소 아님)
-6. recommended: true/false — 종합적으로 제작을 추천하는지
-7. verdict: 종합 판단 한 줄
+6. why_question: 이 소재가 던지는 "왜?" 질문 한 줄(예: "비행기 창문에는 왜 작은 구멍이 있을까?"). 원인·이유를 설명할 거리가 없으면 빈 문자열.
+7. participation: 시청자가 그 "왜?"에 대해 댓글로 자기 생각을 쓰고 서로 의견을 펼칠 잠재력 — Virtal 채널의 가장 핵심 기준이다.
+   - guessable(0~3): 지식 없이도 "내 생각엔…"을 쓸 수 있는가
+   - intuition_gap(0~3): 정답을 들어도 "그래도 이상한데?"가 남는가(직관과 답이 엇갈림)
+   - personal(0~3): "나도 그래/우리는 달라" 같은 내 경험과 연결되는가
+   - safe_debate(0~3): 논쟁이 직관·이론 사이의 건강한 싸움인가(정치·젠더·종교·혐오로 번질수록 0)
+   - score(0~100): 위 네 개를 종합한 댓글 참여 잠재력
+   - split: 댓글이 어디서 갈릴지 한 줄 예측(예: "김서림 방지 vs 압력 조절")
+   - closing_question: 답을 알려준 뒤 마지막에 다시 던질 물음표 한 줄(새 논쟁을 남기는 질문)
+8. recommended: true/false — 종합적으로 제작을 추천하는지(댓글 참여 잠재력이 낮으면 신중하게)
+9. verdict: 종합 판단 한 줄
 
-JSON만 응답: {"summary_ko":"...","hook_point":"...","retention_secret":"...","remix_angle":"...","freshness_note":"...","recommended":true,"verdict":"..."}`;
+JSON만 응답: {"summary_ko":"...","hook_point":"...","retention_secret":"...","remix_angle":"...","freshness_note":"...","why_question":"...","participation":{"guessable":2,"intuition_gap":2,"personal":1,"safe_debate":3,"score":70,"split":"...","closing_question":"...?"},"recommended":true,"verdict":"..."}`;
   } else {
     return res.status(400).json({ error: "type은 analyze, script, youtube_benchmark, cross_analysis, channel_analysis, drama_prompt, translate_titles, assess_clip 중 하나." });
   }

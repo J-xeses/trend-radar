@@ -7,7 +7,9 @@ const C = {
   t: "#f0f0ff", ts: "#a0a0c8", tm: "#58586e", b: "rgba(255,255,255,.07)", b2: "rgba(255,255,255,.13)",
   m: "'IBM Plex Mono', monospace",
 };
-const CATS = ["이색 테크·발명", "미스터리·미제사건", "해외 바이럴·장인", "심리·행동실험", "틈새 상식·역발상", "팩트체크·탐사", "역사·문명", "자연·우주", "인간·몸의 비밀"];
+// 핵심 하위 주제(2026-11-14 결정: 댓글 참여가 활발한 순) — 앞 3개
+const CORE = ["몸과 마음의 착각", "직관 vs 정답(역설·확률·착시)", "일상 속 숨은 설계"];
+const CATS = [...CORE, "이색 테크·발명", "미스터리·미제사건", "심리·행동실험", "틈새 상식·역발상", "팩트체크·탐사", "자연·우주", "역사·문명"];
 const FORMATS = ["검증소", "댓글이 물었다", "직접 해봤다", "TOP5", "딥다이브"];
 const STATUS = [["idea", "아이디어", C.ts], ["research", "조사 중", C.cy], ["plan", "기획 중", C.vi], ["produce", "제작 중", C.am], ["done", "제작 완료", C.g], ["hold", "보류", C.tm]];
 const statusMeta = (s) => STATUS.find((x) => x[0] === s) || STATUS[0];
@@ -23,6 +25,17 @@ function Spark({ series, color = C.cy, w = 150, h = 34 }) {
       <polyline points={`0,${h} ${pts} ${w},${h}`} fill={`${color}22`} stroke="none" />
       <polyline points={pts} fill="none" stroke={color} strokeWidth="1.6" />
     </svg>
+  );
+}
+
+function Part({ p }) {
+  const s = p?.score;
+  const col = s == null ? C.tm : s >= 70 ? C.g : s >= 45 ? C.am : C.r;
+  return (
+    <div style={{ textAlign: "center", minWidth: 62 }} title="댓글 참여 잠재력 — 왜?에 시청자가 자기 생각을 쓰고 의견을 펼칠 가능성(핵심 기준)">
+      <div style={{ fontSize: 22, fontWeight: 900, fontFamily: C.m, color: col, lineHeight: 1 }}>{s ?? "–"}</div>
+      <div style={{ fontSize: 9.5, color: C.tm, marginTop: 3 }}>💬 댓글 참여</div>
+    </div>
   );
 }
 
@@ -47,6 +60,9 @@ function TopicBody({ it }) {
         {it.format && <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 8px", borderRadius: 20, background: `${C.vi}20`, color: C.vi, border: `1px solid ${C.vi}40` }}>{it.format}</span>}
         {it.category && <span style={{ fontSize: 10, color: C.tm }}>{it.category}</span>}
       </div>
+      {it.why_question && <div style={{ fontSize: 12.5, color: C.t, marginTop: 4, fontWeight: 700 }}>❓ {it.why_question}</div>}
+      {it.participation?.split && <div style={{ fontSize: 11.5, color: C.am, marginTop: 2 }}>⚔️ 댓글이 갈릴 곳: {it.participation.split}</div>}
+      {it.closing_question && <div style={{ fontSize: 11.5, color: C.ts, marginTop: 2 }}>❔ 마지막 물음표: {it.closing_question}</div>}
       {it.angle && <div style={{ fontSize: 12, color: C.ts, marginTop: 4, lineHeight: 1.55 }}>🎯 {it.angle}</div>}
       {it.why_evergreen && <div style={{ fontSize: 11.5, color: C.tm, marginTop: 2 }}>♾ {it.why_evergreen}</div>}
       {it.host_role && <div style={{ fontSize: 11.5, color: C.cy, marginTop: 2 }}>🎙 진행자: {it.host_role}</div>}
@@ -73,7 +89,7 @@ export default function LongformPanel({ apiKey }) {
   const [busy, setBusy] = useState("");
   const [err, setErr] = useState("");
   const [filter, setFilter] = useState("all");
-  const [sort, setSort] = useState("score");
+  const [sort, setSort] = useState("mix");
   const [manual, setManual] = useState({ title: "", wiki_title: "", format: "딥다이브" });
   const [rowBusy, setRowBusy] = useState({});
   const [wikiEdit, setWikiEdit] = useState({});
@@ -113,7 +129,13 @@ export default function LongformPanel({ apiKey }) {
   const remove = async (id) => { await fetch(`/api/longform?id=${encodeURIComponent(id)}`, { method: "DELETE" }); load(); };
 
   const shown = items.filter((x) => filter === "all" || x.status === filter)
-    .sort((a, b) => (sort === "score" ? (b.evergreen?.score ?? -1) - (a.evergreen?.score ?? -1) : String(b.updatedAt).localeCompare(String(a.updatedAt))));
+    .sort((a, b) => {
+      const mix = (x) => 0.6 * (x.participation?.score ?? 0) + 0.4 * (x.evergreen?.score ?? 0);
+      if (sort === "mix") return mix(b) - mix(a);
+      if (sort === "part") return (b.participation?.score ?? -1) - (a.participation?.score ?? -1);
+      if (sort === "score") return (b.evergreen?.score ?? -1) - (a.evergreen?.score ?? -1);
+      return String(b.updatedAt).localeCompare(String(a.updatedAt));
+    });
   const chip = (on, color = C.ac) => ({ fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 20, cursor: "pointer", border: `1px solid ${on ? color : C.b2}`, background: on ? `${color}20` : "transparent", color: on ? color : C.ts });
   const btn = (color = C.ac, solid) => ({ fontSize: 11.5, fontWeight: 700, padding: "6px 12px", borderRadius: 9, cursor: "pointer", border: `1px solid ${color}60`, background: solid ? color : `${color}15`, color: solid ? "#fff" : color });
   const card = { background: C.bg2, border: `1px solid ${C.b}`, borderRadius: 12, padding: "12px 14px", display: "flex", gap: 14 };
@@ -135,7 +157,7 @@ export default function LongformPanel({ apiKey }) {
       <div style={{ background: C.bg1, border: `1px solid ${C.b}`, borderRadius: 14, padding: 16, display: "flex", flexDirection: "column", gap: 10 }}>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           <span style={chip(!cat)} onClick={() => setCat("")}>자유</span>
-          {CATS.map((c) => <span key={c} style={chip(cat === c)} onClick={() => setCat(c)}>{c}</span>)}
+          {CATS.map((c) => <span key={c} style={chip(cat === c, CORE.includes(c) ? C.g : C.ac)} onClick={() => setCat(c)}>{CORE.includes(c) ? "★ " : ""}{c}</span>)}
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
           <input style={{ ...input, flex: 1, minWidth: 220 }} placeholder="키워드·방향(선택) — 예: 비행기, 일상 속 숨은 설계, 착각을 부르는 심리" value={seed} onChange={(e) => setSeed(e.target.value)} onKeyDown={(e) => e.key === "Enter" && discover()} />
@@ -155,10 +177,10 @@ export default function LongformPanel({ apiKey }) {
 
       {cands.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <div style={{ fontSize: 12.5, fontWeight: 800, color: C.t }}>새로 찾은 후보 {cands.length}개 <span style={{ fontWeight: 400, color: C.tm }}>— 에버그린 점수 높은 순. 마음에 드는 것만 저장하세요.</span></div>
+          <div style={{ fontSize: 12.5, fontWeight: 800, color: C.t }}>새로 찾은 후보 {cands.length}개 <span style={{ fontWeight: 400, color: C.tm }}>— 댓글 참여(60%)+에버그린(40%) 높은 순. 마음에 드는 것만 저장하세요.</span></div>
           {cands.map((it, k) => (
             <div key={k} style={{ ...card, borderColor: `${C.ac}40` }}>
-              <Score ev={it.evergreen} />
+              <Part p={it.participation} /><Score ev={it.evergreen} />
               <div style={{ flex: 1, minWidth: 0 }}><TopicBody it={it} /></div>
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 <button style={btn(C.g, true)} onClick={() => save(it, k)}>창고에 저장</button>
@@ -176,7 +198,7 @@ export default function LongformPanel({ apiKey }) {
           <span style={chip(filter === "all")} onClick={() => setFilter("all")}>전체 {items.length}</span>
           {STATUS.map(([k, l, c]) => <span key={k} style={chip(filter === k, c)} onClick={() => setFilter(k)}>{l} {items.filter((x) => x.status === k).length}</span>)}
           <select style={{ ...input, marginLeft: "auto", padding: "4px 8px" }} value={sort} onChange={(e) => setSort(e.target.value)}>
-            <option value="score">에버그린 점수순</option><option value="recent">최근 수정순</option>
+            <option value="mix">참여+에버그린순</option><option value="part">댓글 참여순</option><option value="score">에버그린 점수순</option><option value="recent">최근 수정순</option>
           </select>
         </div>
         {shown.length === 0 && <div style={{ fontSize: 12.5, color: C.tm, padding: "18px 0" }}>저장된 소재가 없어요. 위에서 발굴하거나 직접 추가하세요.</div>}
@@ -186,7 +208,7 @@ export default function LongformPanel({ apiKey }) {
           return (
             <div key={it.id} style={{ ...card, flexDirection: "column", gap: 10 }}>
               <div style={{ display: "flex", gap: 14 }}>
-                <Score ev={it.evergreen} />
+                <Part p={it.participation} /><Score ev={it.evergreen} />
                 <div style={{ flex: 1, minWidth: 0 }}><TopicBody it={it} /></div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "stretch", width: 150 }}>
                   <select style={{ ...input, color: sc, fontWeight: 700 }} value={it.status} onChange={(e) => patch(it.id, { status: e.target.value })}>

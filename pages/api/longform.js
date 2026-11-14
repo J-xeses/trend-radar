@@ -151,12 +151,14 @@ ${category ? `[카테고리] ${category}` : ""}${seed ? `\n[키워드/방향] ${
 조건:
 - 10분 넘게 풀 거리가 있을 것(사례 여러 개·원리·반전·논쟁 중 2가지 이상).
 - 진행자가 끼어들 여지(직접 검증·실험·댓글 질문 답변·순위 매기기)가 있을 것.
+- **가장 중요:** 채널 정체성은 "사람들의 호기심·몰랐던 사실의 원인과 이유를 알려주는 채널"이다. 그 "왜?"에 대해 시청자가 댓글로 자기 생각을 쓰고 서로 의견을 펼칠 수 있는 소재를 우선하라(누구나 추측 가능 · 직관과 답이 엇갈림 · 내 경험과 연결 · 정치/젠더/종교로 번지지 않는 안전한 논쟁).
+- 영상은 답을 알려준 뒤 마지막에 다시 물음표를 던지며 끝난다(채널 고정 아이덴티티) — closing_question에 그 질문을.
 - 실존 개인의 사생활·명예훼손 위험, 의학·금융 조언, 정치 논쟁은 피할 것.
 - wiki_title은 이 소재를 대표하는 실제 영어 위키백과 문서 제목(정확한 표기). 없으면 가장 가까운 상위 개념 문서.
 - format은 ${FORMATS.join(" / ")} 중 하나.
 
 JSON 배열만 응답:
-[{"title":"한국어 소재 제목(호기심형)","angle":"이 채널만의 풀이 각도 한 줄","why_evergreen":"오래 찾아볼 이유 한 줄","format":"검증소","host_role":"진행자가 하는 일 한 줄","chapters":["챕터1","챕터2","챕터3","챕터4"],"wiki_title":"English Wikipedia title","yt_query":"english youtube search query"}]`;
+[{"title":"한국어 소재 제목(호기심형)","why_question":"핵심 왜? 질문","participation":{"score":0,"split":"댓글이 갈릴 곳 한 줄"},"closing_question":"마지막 물음표 한 줄","angle":"이 채널만의 풀이 각도 한 줄","why_evergreen":"오래 찾아볼 이유 한 줄","format":"검증소","host_role":"진행자가 하는 일 한 줄","chapters":["챕터1","챕터2","챕터3","챕터4"],"wiki_title":"English Wikipedia title","yt_query":"english youtube search query"}]`;
   const r = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
@@ -169,7 +171,9 @@ JSON 배열만 응답:
   // 위키 검증은 하나씩(병렬로 몰아 부르면 429)
   const enriched = [];
   for (const x of items) { enriched.push(await enrichWiki({ ...x, category: category || "", seed: seed || "" })); await sleep(250); }
-  return enriched.sort((a, b) => (b.evergreen?.score ?? -1) - (a.evergreen?.score ?? -1));
+  // 댓글 참여 잠재력(핵심 기준)과 에버그린을 함께: 참여 60% + 에버그린 40%
+  const mix = (x) => 0.6 * (x.participation?.score ?? 0) + 0.4 * (x.evergreen?.score ?? 0);
+  return enriched.sort((a, b) => mix(b) - mix(a));
 }
 
 export default async function handler(req, res) {
