@@ -193,7 +193,8 @@ async function planSegments(segs, oneLine, key) {
 queries: replace일 때만 영어 검색어 2개(짧고 구체적인 명사구, 스톡 검색에 잘 걸리게). 그 외엔 빈 배열.
 media: "video" 또는 "image" (움직임이 중요하면 video).
 ${list}
-JSON 배열만 응답: [{"i":0,"kind":"replace","queries":["...","..."],"media":"video"}]`;
+reason: 왜 그렇게 분류했는지 한국어 한 줄(화면의 어떤 특징 때문인지 — 나중에 사람이 판단을 검토할 근거).
+JSON 배열만 응답: [{"i":0,"kind":"replace","reason":"...","queries":["...","..."],"media":"video"}]`;
   return callClaude(key, prompt, 4000);
 }
 
@@ -269,7 +270,7 @@ export default async function handler(req, res) {
       const outcome = p.kind === "replace" ? (matched ? "replaced" : "keep") : p.kind;
       return {
         t: s.t, start: s.start, end: s.end, len, visual: s.visual, audio: s.audio, role: s.role,
-        kind: p.kind, outcome, queries: p.queries || [], media: p.media,
+        kind: p.kind, kindReason: p.reason || "", outcome, queries: p.queries || [], media: p.media,
         frame: frame?.name || null, candidates, matched, partial,
       };
     }));
